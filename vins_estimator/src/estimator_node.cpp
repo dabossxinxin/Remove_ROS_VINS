@@ -1089,14 +1089,14 @@ int main(int argc, char **argv)
 			T = tframe - vTimeStamps[ni - 1];
 
 		if (timeSpent < T)
-			usleep((T - timeSpent)*1e6); //sec->us:1e6
+			Sleep((T - timeSpent)*1e6); //sec->us:1e6
 		else
 			cerr << endl << "process image speed too slow, larger than interval time between two consecutive frames" << endl;
 
 	}
 	running_flag = false;
 	while (!view_done)     //main thread wait view thread used its data structure
-		usleep(5000);
+		Sleep(5000);
 	/******************* load image end ***********************/
 	return 0;
 }
