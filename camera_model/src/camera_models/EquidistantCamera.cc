@@ -2,7 +2,7 @@
 
 #include <cmath>
 #include <cstdio>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 #include <iomanip>
 #include <iostream>
 #include <opencv2/calib3d/calib3d.hpp>
@@ -369,7 +369,7 @@ EquidistantCamera::estimateIntrinsics(const cv::Size& boardSize,
                     continue;
                 }
 
-                double f = cv::norm(ipts.at(0) - ipts.at(1)) / M_PI;
+                double f = cv::norm(ipts.at(0) - ipts.at(1)) / CV_PI;
 
                 params.mu() = f;
                 params.mv() = f;

@@ -1,7 +1,7 @@
 #pragma once 
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 #include <iostream>
 #include <cstdlib>
 #include <deque>

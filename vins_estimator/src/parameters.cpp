@@ -1,7 +1,7 @@
 #include "parameters.h"
 #include <string>
-#include <unistd.h>
 #include <iostream>
+#include <crtdbg.h>
 
 #define FILENAMEPATH_MAX 80
 using namespace std;

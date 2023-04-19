@@ -58,22 +58,22 @@ float hypot3f(float x, float y, float z)
 
 double d2r(double deg)
 {
-	return deg / 180.0 * M_PI;
+	return deg / 180.0 * CV_PI;
 }
 
 float d2r(float deg)
 {
-	return deg / 180.0f * M_PI;
+	return deg / 180.0f * CV_PI;
 }
 
 double r2d(double rad)
 {
-	return rad / M_PI * 180.0;
+	return rad / CV_PI * 180.0;
 }
 
 float r2d(float rad)
 {
-	return rad / M_PI * 180.0f;
+	return rad / CV_PI * 180.0f;
 }
 
 double sinc(double theta)
@@ -760,8 +760,8 @@ LLtoUTM(double latitude, double longitude,
     double eccPrimeSquared;
     double N, T, C, A, M;
 
-    double LatRad = latitude * M_PI / 180.0;
-    double LongRad = longitude * M_PI / 180.0;
+    double LatRad = latitude * CV_PI / 180.0;
+    double LongRad = longitude * CV_PI / 180.0;
     double LongOriginRad;
 
     int ZoneNumber = static_cast<int>((longitude + 180.0) / 6.0) + 1;
@@ -779,7 +779,7 @@ LLtoUTM(double latitude, double longitude,
         else if (longitude >= 33.0 && longitude < 42.0) ZoneNumber = 37;
     }
     LongOrigin = static_cast<double>((ZoneNumber - 1) * 6 - 180 + 3);  //+3 puts origin in middle of zone
-    LongOriginRad = LongOrigin * M_PI / 180.0;
+    LongOriginRad = LongOrigin * CV_PI / 180.0;
 
     // compute the UTM Zone from the latitude and longitude
     std::ostringstream oss;
@@ -870,7 +870,7 @@ UTMtoLL(double utmNorthing, double utmEasting, const std::string& utmZone,
               + (21.0 * e1 * e1 / 16.0 - 55.0 * e1 * e1 * e1 * e1 / 32.0)
               * sin(4.0 * mu)
               + (151.0 * e1 * e1 * e1 / 96.0) * sin(6.0 * mu);
-    phi1 = phi1Rad / M_PI * 180.0;
+    phi1 = phi1Rad / CV_PI * 180.0;
 
     N1 = WGS84_A / sqrt(1.0 - WGS84_ECCSQ * sin(phi1Rad) * sin(phi1Rad));
     T1 = tan(phi1Rad) * tan(phi1Rad);
@@ -885,13 +885,13 @@ UTMtoLL(double utmNorthing, double utmEasting, const std::string& utmZone,
                   + (61.0 + 90.0 * T1 + 298.0 * C1 + 45.0 * T1 * T1
                      - 252.0 * eccPrimeSquared - 3.0 * C1 * C1)
                   * D * D * D * D * D * D / 720.0);
-    latitude *= 180.0 / M_PI;
+    latitude *= 180.0 / CV_PI;
 
     longitude = (D - (1.0 + 2.0 * T1 + C1) * D * D * D / 6.0
                  + (5.0 - 2.0 * C1 + 28.0 * T1 - 3.0 * C1 * C1
                     + 8.0 * eccPrimeSquared + 24.0 * T1 * T1)
                  * D * D * D * D * D / 120.0) / cos(phi1Rad);
-    longitude = LongOrigin + longitude / M_PI * 180.0;
+    longitude = LongOrigin + longitude / CV_PI * 180.0;
 }
 
 long int
@@ -901,9 +901,9 @@ timestampDiff(uint64_t t1, uint64_t t2)
     {
         uint64_t d = t2 - t1;
 
-        if (d > std::numeric_limits<long int>::max())
+        if (d > INT_MAX)
         {
-            return std::numeric_limits<long int>::max();
+            return INT_MAX;
         }
         else
         {
@@ -914,9 +914,9 @@ timestampDiff(uint64_t t1, uint64_t t2)
     {
         uint64_t d = t1 - t2;
 
-        if (d > std::numeric_limits<long int>::max())
+        if (d > INT_MAX)
         {
-            return std::numeric_limits<long int>::min();
+			return INT_MIN;
         }
         else
         {

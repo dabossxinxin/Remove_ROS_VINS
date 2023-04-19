@@ -27,8 +27,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include "dirent.h"
-#include <unistd.h>
 #include <string>
 #include <ctime>
 #include <cstdlib>

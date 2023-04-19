@@ -2,7 +2,7 @@
 #define TRANSFORM_H
 
 #include <boost/shared_ptr.hpp>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 #include <stdint.h>
 
 namespace camodocal

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 #include "../estimator.h"
 #include "../parameters.h"
 #include "../../../include/Vector3.h"

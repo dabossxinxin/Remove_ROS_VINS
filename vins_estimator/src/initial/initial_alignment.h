@@ -1,5 +1,5 @@
 #pragma once
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 #include <iostream>
 #include "../factor/imu_factor.h"
 #include "../utility/utility.h"

@@ -1,7 +1,7 @@
 #include "camodocal/calib/CameraCalibration.h"
 
 #include <cstdio>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 #include <iomanip>
 #include <iostream>
 #include <algorithm>

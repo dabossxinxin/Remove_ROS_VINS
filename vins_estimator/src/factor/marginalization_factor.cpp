@@ -257,7 +257,7 @@ void MarginalizationInfo::marginalize()
     }
     for( int i = NUM_THREADS - 1; i >= 0; i--)  
     {
-        pthread_join( tids[i], NULL ); 
+		pthread_join(tids[i], NULL);
         A += threadsstruct[i].A;
         b += threadsstruct[i].b;
     }

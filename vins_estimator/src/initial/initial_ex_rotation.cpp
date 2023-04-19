@@ -23,7 +23,7 @@ bool InitialEXRotation::CalibrationExRotation(vector<pair<Vector3d, Vector3d>> c
         Quaterniond r1(Rc[i]);
         Quaterniond r2(Rc_g[i]);
 
-        double angular_distance = 180 / M_PI * r1.angularDistance(r2);
+        double angular_distance = 180 / CV_PI * r1.angularDistance(r2);
       //  ROS_DEBUG( "%d %f", i, angular_distance);
 
         double huber = angular_distance > 5.0 ? 5.0 / angular_distance : 1.0;

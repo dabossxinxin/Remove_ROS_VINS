@@ -3,7 +3,8 @@
 #include <cmath>
 #include <cassert>
 #include <cstring>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
+#include <opencv2/core.hpp>
 
 class Utility
 {
@@ -78,7 +79,7 @@ class Utility
         ypr(1) = p;
         ypr(2) = r;
 
-        return ypr / M_PI * 180.0;
+        return ypr / CV_PI * 180.0;
     }
 
     template <typename Derived>
@@ -86,9 +87,9 @@ class Utility
     {
         typedef typename Derived::Scalar Scalar_t;
 
-        Scalar_t y = ypr(0) / 180.0 * M_PI;
-        Scalar_t p = ypr(1) / 180.0 * M_PI;
-        Scalar_t r = ypr(2) / 180.0 * M_PI;
+        Scalar_t y = ypr(0) / 180.0 * CV_PI;
+        Scalar_t p = ypr(1) / 180.0 * CV_PI;
+        Scalar_t r = ypr(2) / 180.0 * CV_PI;
 
         Eigen::Matrix<Scalar_t, 3, 3> Rz;
         Rz << cos(y), -sin(y), 0,

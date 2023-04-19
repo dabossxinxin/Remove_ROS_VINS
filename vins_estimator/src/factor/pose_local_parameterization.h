@@ -1,6 +1,6 @@
 #pragma once
 
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 #include <ceres/ceres.h>
 #include "../utility/utility.h"
 

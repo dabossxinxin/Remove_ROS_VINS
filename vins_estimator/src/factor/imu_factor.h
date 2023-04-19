@@ -1,7 +1,7 @@
 #pragma once
 //#include <ros/assert.h>
 #include <iostream>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 
 #include "../utility/utility.h"
 #include "../parameters.h"

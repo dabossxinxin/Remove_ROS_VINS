@@ -5,7 +5,7 @@ using namespace std;
 
 #include <opencv2/opencv.hpp>
 //#include <opencv2/core/eigen.hpp>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 using namespace Eigen;
 
 //#include <ros/console.h>

@@ -18,8 +18,6 @@
 #include <iostream>
 #include <cmath>
 #include <boost/math/special_functions/round.hpp>
-#include <sys/time.h>
-
 
 /*********************************************************************
  ** Cross Platform Headers
