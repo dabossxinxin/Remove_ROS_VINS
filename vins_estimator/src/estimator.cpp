@@ -238,10 +238,10 @@ bool Estimator::initialStructure()
         }
     }
     // global sfm
-    Quaterniond Q[frame_count + 1];
-    Vector3d T[frame_count + 1];
-    map<int, Vector3d> sfm_tracked_points;
-    vector<SFMFeature> sfm_f;
+    std::vector<Eigen::Quaterniond> Q(frame_count + 1);
+    std::vector<Eigen::Vector3d> T(frame_count + 1);
+    std::map<int, Vector3d> sfm_tracked_points;
+    std::vector<SFMFeature> sfm_f;
     for (auto &it_per_id : f_manager.feature)
     {
         int imu_j = it_per_id.start_frame - 1;

@@ -226,9 +226,9 @@ template <typename T>
 void YawPitchRollToRotationMatrix(const T yaw, const T pitch, const T roll, T R[9])
 {
 
-	T y = yaw / T(180.0) * T(M_PI);
-	T p = pitch / T(180.0) * T(M_PI);
-	T r = roll / T(180.0) * T(M_PI);
+	T y = yaw / T(180.0) * T(CV_PI);
+	T p = pitch / T(180.0) * T(CV_PI);
+	T r = roll / T(180.0) * T(CV_PI);
 
 
 	R[0] = cos(y) * cos(p);

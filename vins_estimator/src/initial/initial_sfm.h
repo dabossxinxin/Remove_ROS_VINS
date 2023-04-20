@@ -1,4 +1,5 @@
 #pragma once 
+
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
 #include <Eigen/Dense>
@@ -8,10 +9,9 @@
 #include <map>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/opencv.hpp>
+
 using namespace Eigen;
 using namespace std;
-
-
 
 struct SFMFeature
 {
@@ -60,7 +60,8 @@ class GlobalSFM
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	GlobalSFM();
-	bool construct(int frame_num, Quaterniond* q, Vector3d* T, int l,
+	bool construct(int frame_num, std::vector<Eigen::Quaterniond>& q,
+			  std::vector<Eigen::Vector3d>& T, int l,
 			  const Matrix3d relative_R, const Vector3d relative_T,
 			  vector<SFMFeature> &sfm_f, map<int, Vector3d> &sfm_tracked_points);
 

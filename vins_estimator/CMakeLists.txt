@@ -3,7 +3,8 @@ project(vins_estimator)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++11")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g -pthread -fopenmp")
+set(CMAKE_CXX_FLAGS_DEBUG "/bigobj /EHsc")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 /bigobj /EHsc")
 
 include_directories(${CMAKE_SOURCE_DIR}/../camera_model/include)
 
@@ -12,6 +13,19 @@ find_package(Ceres REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Pangolin REQUIRED)
 find_package(Boost REQUIRED COMPONENTS filesystem program_options system)
+
+#find_path(OpenCV_INCLUDE_DIRS NAMES opencv2 HINTS ${CMAKE_SOURCE_DIR}/../../SDK/opencv-3.4.6/include)
+#find_file(OpenCV_DEBUG_LIB opencv_world346d.lib HINTS ${CMAKE_SOURCE_DIR}/../../SDK/opencv-3.4.6/lib)
+#find_file(OpenCV_RELEASE_LIB opencv_world346.lib HINTS ${CMAKE_SOURCE_DIR}/../../SDK/opencv-3.4.6/lib)
+
+#find_path(GLEW_INCLUDE_DIRS NAMES GL HINTS ${CMAKE_SOURCE_DIR}/../../SDK/glew/include)
+#find_file(GLEW_DEBUG_LIB glewd.lib HINTS ${CMAKE_SOURCE_DIR}/../../SDK/glew/lib)
+#find_file(GLEW_RELEASE_LIB glew.lib HINTS ${CMAKE_SOURCE_DIR}/../../SDK/glew/lib)
+
+#find_path(Pangolin_INCLUDE_DIRS pangolin HINTS ${CMAKE_SOURCE_DIR}/../../Pangolin/include)
+#find_path(Pangolin_LIB_DIR pangolin.lib HINTS ${CMAKE_SOURCE_DIR}/../../Pangolin/lib)
+#set(Pangolin_DEBUG_LIB ${Pangolin_LIB_DIR}/pangolind.lib)
+#set(Pangolin_RELEASE_LIB ${Pangolin_LIB_DIR}/pangolin.lib)
 
 include_directories(${CERES_INCLUDE_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
@@ -63,9 +77,10 @@ add_executable(vins_estimator
     )
 
 target_link_libraries(vins_estimator 
-	${OpenCV_LIBRARIES}  
-	${Pangolin_LIBRARIES}
-	${CERES_LIBRARIES}
+	${CERES_LIBRARIES} 
+	${Pangolin_LIBRARIES} 
+	${OpenCV_LIBRARIES}
 ) 
+
 
 

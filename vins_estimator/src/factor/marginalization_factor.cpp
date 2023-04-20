@@ -1,12 +1,14 @@
 #include "marginalization_factor.h"
+
 using namespace std;
+
 void ResidualBlockInfo::Evaluate()
 {
     residuals.resize(cost_function->num_residuals());
 
     std::vector<int> block_sizes = cost_function->parameter_block_sizes();
-    raw_jacobians = new double *[block_sizes.size()];
-    jacobians.resize(block_sizes.size());
+	raw_jacobians = new double *[block_sizes.size()];
+	jacobians.resize(block_sizes.size());
 
     for (int i = 0; i < static_cast<int>(block_sizes.size()); i++)
     {
@@ -200,70 +202,61 @@ void MarginalizationInfo::marginalize()
     Eigen::VectorXd b(pos);
     A.setZero();
     b.setZero();
-    /*
-    for (auto it : factors)
-    {
-        for (int i = 0; i < static_cast<int>(it->parameter_blocks.size()); i++)
-        {
-            int idx_i = parameter_block_idx[reinterpret_cast<long>(it->parameter_blocks[i])];
-            int size_i = localSize(parameter_block_size[reinterpret_cast<long>(it->parameter_blocks[i])]);
-            Eigen::MatrixXd jacobian_i = it->jacobians[i].leftCols(size_i);
-            for (int j = i; j < static_cast<int>(it->parameter_blocks.size()); j++)
-            {
-                int idx_j = parameter_block_idx[reinterpret_cast<long>(it->parameter_blocks[j])];
-                int size_j = localSize(parameter_block_size[reinterpret_cast<long>(it->parameter_blocks[j])]);
-                Eigen::MatrixXd jacobian_j = it->jacobians[j].leftCols(size_j);
-                if (i == j)
-                    A.block(idx_i, idx_j, size_i, size_j) += jacobian_i.transpose() * jacobian_j;
-                else
-                {
-                    A.block(idx_i, idx_j, size_i, size_j) += jacobian_i.transpose() * jacobian_j;
-                    A.block(idx_j, idx_i, size_j, size_i) = A.block(idx_i, idx_j, size_i, size_j).transpose();
-                }
-            }
-            b.segment(idx_i, size_i) += jacobian_i.transpose() * it->residuals;
-        }
-    }
-    ROS_INFO("summing up costs %f ms", t_summing.toc());
-    */
-    //multi thread
-
-
-    TicToc t_thread_summing;
-    pthread_t tids[NUM_THREADS];
-    ThreadsStruct threadsstruct[NUM_THREADS];
-    int i = 0;
-    for (auto it : factors)
-    {
-        threadsstruct[i].sub_factors.push_back(it);
-        i++;
-        i = i % NUM_THREADS;
-    }
-    for (int i = 0; i < NUM_THREADS; i++)
-    {
-        TicToc zero_matrix;
-        threadsstruct[i].A = Eigen::MatrixXd::Zero(pos,pos);
-        threadsstruct[i].b = Eigen::VectorXd::Zero(pos);
-        threadsstruct[i].parameter_block_size = parameter_block_size;
-        threadsstruct[i].parameter_block_idx = parameter_block_idx;
-        int ret = pthread_create( &tids[i], NULL, ThreadsConstructA ,(void*)&(threadsstruct[i]));
-        if (ret != 0)
-        {
-        //    ROS_WARN("pthread_create error");
-         //   ROS_BREAK();
-	  cout << "WARN: pthread_create error" << endl;
-	  break;
-        }
-    }
-    for( int i = NUM_THREADS - 1; i >= 0; i--)  
-    {
-		pthread_join(tids[i], NULL);
-        A += threadsstruct[i].A;
-        b += threadsstruct[i].b;
-    }
-    //ROS_DEBUG("thread summing up costs %f ms", t_thread_summing.toc());
-    //ROS_INFO("A diff %f , b diff %f ", (A - tmp_A).sum(), (b - tmp_b).sum());
-
+    
+	if (0) {
+		for (auto it : factors)
+		{
+			for (int i = 0; i < static_cast<int>(it->parameter_blocks.size()); i++)
+			{
+				int idx_i = parameter_block_idx[reinterpret_cast<long>(it->parameter_blocks[i])];
+				int size_i = localSize(parameter_block_size[reinterpret_cast<long>(it->parameter_blocks[i])]);
+				Eigen::MatrixXd jacobian_i = it->jacobians[i].leftCols(size_i);
+				for (int j = i; j < static_cast<int>(it->parameter_blocks.size()); j++)
+				{
+					int idx_j = parameter_block_idx[reinterpret_cast<long>(it->parameter_blocks[j])];
+					int size_j = localSize(parameter_block_size[reinterpret_cast<long>(it->parameter_blocks[j])]);
+					Eigen::MatrixXd jacobian_j = it->jacobians[j].leftCols(size_j);
+					if (i == j)
+						A.block(idx_i, idx_j, size_i, size_j) += jacobian_i.transpose() * jacobian_j;
+					else
+					{
+						A.block(idx_i, idx_j, size_i, size_j) += jacobian_i.transpose() * jacobian_j;
+						A.block(idx_j, idx_i, size_j, size_i) = A.block(idx_i, idx_j, size_i, size_j).transpose();
+					}
+				}
+				b.segment(idx_i, size_i) += jacobian_i.transpose() * it->residuals;
+			}
+		}
+	}
+	else {
+		TicToc t_thread_summing;
+		std::thread tids[NUM_THREADS];
+		ThreadsStruct threadsstruct[NUM_THREADS];
+		int i = 0;
+		for (auto it : factors)
+		{
+			threadsstruct[i].sub_factors.push_back(it);
+			i++;
+			i = i % NUM_THREADS;
+		}
+		for (int i = 0; i < NUM_THREADS; i++)
+		{
+			TicToc zero_matrix;
+			threadsstruct[i].A = Eigen::MatrixXd::Zero(pos, pos);
+			threadsstruct[i].b = Eigen::VectorXd::Zero(pos);
+			threadsstruct[i].parameter_block_size = parameter_block_size;
+			threadsstruct[i].parameter_block_idx = parameter_block_idx;
+			tids[i] = std::thread(ThreadsConstructA, (void*)&(threadsstruct[i]));
+		}
+		for (int i = NUM_THREADS - 1; i >= 0; i--)
+		{
+			tids[i].join();
+			A += threadsstruct[i].A;
+			b += threadsstruct[i].b;
+		}
+		//ROS_DEBUG("thread summing up costs %f ms", t_thread_summing.toc());
+		//ROS_INFO("A diff %f , b diff %f ", (A - tmp_A).sum(), (b - tmp_b).sum());
+	}
 
     //TODO
     Eigen::MatrixXd Amm = 0.5 * (A.block(0, 0, m, m) + A.block(0, 0, m, m).transpose());

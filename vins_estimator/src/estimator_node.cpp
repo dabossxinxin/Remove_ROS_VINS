@@ -4,10 +4,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-//#include <ros/ros.h>
-//#include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
-
 #include "estimator.h"
 #include "parameters.h"
 #include "utility/visualization.h"
@@ -1096,7 +1093,7 @@ int main(int argc, char **argv)
 	}
 	running_flag = false;
 	while (!view_done)     //main thread wait view thread used its data structure
-		Sleep(5000);
+		Sleep(5);
 	/******************* load image end ***********************/
 	return 0;
 }

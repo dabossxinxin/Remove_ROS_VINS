@@ -227,9 +227,9 @@ void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d 
 	int max_length = cur_index + 1;
 
 	// w^t_i   w^q_i
-	double t_array[max_length][3];
-	Quaterniond q_array[max_length];
-	double euler_array[max_length][3];
+	std::vector<Eigen::Vector3d> t_array(max_length);
+	std::vector<Eigen::Quaterniond> q_array(max_length);
+	std::vector<Eigen::Vector3d> euler_array(max_length);
 
 	ceres::Problem problem;
 	ceres::Solver::Options options;
@@ -267,13 +267,13 @@ void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d 
 		euler_array[i][1] = euler_angle.y();
 		euler_array[i][2] = euler_angle.z();
 
-		problem.AddParameterBlock(euler_array[i], 1, angle_local_parameterization);
-		problem.AddParameterBlock(t_array[i], 3);
+		problem.AddParameterBlock(euler_array[i].data(), 1, angle_local_parameterization);
+		problem.AddParameterBlock(t_array[i].data(), 3);
 
 		if ((*it)->global_index == earliest_loop_index)
 		{	
-			problem.SetParameterBlockConstant(euler_array[i]);
-			problem.SetParameterBlockConstant(t_array[i]);
+			problem.SetParameterBlockConstant(euler_array[i].data());
+			problem.SetParameterBlockConstant(t_array[i].data());
 		}
 
 		//add edge
@@ -287,10 +287,10 @@ void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d 
 		    double relative_yaw = euler_array[i][0] - euler_array[i-j][0];
 		    ceres::CostFunction* cost_function = FourDOFError::Create( relative_t.x(), relative_t.y(), relative_t.z(),
 		                                   relative_yaw, euler_conncected.y(), euler_conncected.z());
-		    problem.AddResidualBlock(cost_function, NULL, euler_array[i-j], 
-		                            t_array[i-j], 
-		                            euler_array[i], 
-		                            t_array[i]);
+		    problem.AddResidualBlock(cost_function, NULL, euler_array[i-j].data(), 
+		                            t_array[i-j].data(), 
+		                            euler_array[i].data(), 
+		                            t_array[i].data());
 		  }
 		}
 
@@ -305,10 +305,10 @@ void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d 
 			double relative_yaw = (*it)->getLoopRelativeYaw();
 			ceres::CostFunction* cost_function = FourDOFWeightError::Create( relative_t.x(), relative_t.y(), relative_t.z(),
 																	   relative_yaw, euler_conncected.y(), euler_conncected.z());
-			problem.AddResidualBlock(cost_function, loss_function, euler_array[connected_index], 
-														  t_array[connected_index], 
-														  euler_array[i], 
-														  t_array[i]);
+			problem.AddResidualBlock(cost_function, loss_function, euler_array[connected_index].data(), 
+														  t_array[connected_index].data(), 
+														  euler_array[i].data(), 
+														  t_array[i].data());
 			
 		}
 		if ((*it)->global_index == cur_index)

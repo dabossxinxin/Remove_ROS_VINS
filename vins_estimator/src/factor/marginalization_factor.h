@@ -6,6 +6,7 @@
 #include <ceres/ceres.h>
 #include <unordered_map>
 #include <iostream>
+#include <thread>
 #include "../utility/utility.h"
 #include "../utility/tic_toc.h"
 

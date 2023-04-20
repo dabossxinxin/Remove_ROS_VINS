@@ -1,7 +1,7 @@
 #include "parameters.h"
 #include <string>
 #include <iostream>
-#include <crtdbg.h>
+#include <direct.h>
 
 #define FILENAMEPATH_MAX 80
 using namespace std;
@@ -64,11 +64,11 @@ void readParameters(const string & config_file)
         std::cerr << "ERROR: Wrong path to settings " << config_file << std::endl;
     }
 
+	// 获取当前工作目录：window平台
+    VINS_FOLDER_PATH = _getcwd(NULL,FILENAMEPATH_MAX);
+	// 获取当前工作目录：linux平台
+	//VINS_FOLDER_PATH = getcwd(NULL, FILENAMEPATH_MAX);
 
-    VINS_FOLDER_PATH = getcwd(NULL,FILENAMEPATH_MAX);
- //   fsSettings["output_path"] >> VINS_RESULT_PATH;
-
-   
     fsSettings["image_topic"] >> IMAGE_TOPIC;
     fsSettings["imu_topic"] >> IMU_TOPIC;
     fsSettings["visualLookAtX"] >> VISUALLOOKATX;

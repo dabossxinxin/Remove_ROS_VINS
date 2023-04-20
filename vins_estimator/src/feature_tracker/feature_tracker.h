@@ -14,7 +14,7 @@
 #include "camodocal/camera_models/PinholeCamera.h"
 
 #include "../parameters.h"
-#include "tic_toc.h"
+#include "../utility/tic_toc.h"
 
 using namespace std;
 using namespace camodocal;
