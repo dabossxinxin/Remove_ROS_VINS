@@ -1,18 +1,5 @@
-/*********************************************************************
- *all edit by solomon
- *solomon.he@zhaoxin.com
- *********************************************************************/
-
 #ifndef ROS_TIME_H_INCLUDED
 #define ROS_TIME_H_INCLUDED
-
-/*********************************************************************
- ** Pragmas
- *********************************************************************/
- 
-/*********************************************************************
- ** Headers
- *********************************************************************/
 
 #include <iostream>
 #include <cmath>
@@ -22,7 +9,7 @@
  ** Cross Platform Headers
  *********************************************************************/
 
-namespace  ros //DataStucture
+namespace ros
 {
 	/*********************************************************************
 	** Functions
@@ -78,7 +65,8 @@ namespace  ros //DataStucture
 	 *********************************************************************/
 
 	 /**
-	  * \brief Base class for Time implementations.  Provides storage, common functions and operator overloads.
+	  * \brief Base class for Time implementations.  
+	  *		   Provides storage, common functions and operator overloads.
 	  * This should not need to be used directly.
 	  */
 	template<class T>
@@ -99,7 +87,10 @@ namespace  ros //DataStucture
 		{
 			return sec == rhs.sec && nsec == rhs.nsec;
 		}
-		inline bool operator!=(const T &rhs) const { return !(*static_cast<const T*>(this) == rhs); }
+		inline bool operator!=(const T &rhs) const 
+		{ 
+			return !(*static_cast<const T*>(this) == rhs); 
+		}
 		bool operator>(const T &rhs) const
 		{
 			if (sec > rhs.sec)
@@ -133,7 +124,10 @@ namespace  ros //DataStucture
 			return false;
 		}
 
-		double toSec()  const { return (double)sec + 1e-9*(double)nsec; };
+		double toSec()  const 
+		{ 
+			return (double)sec + 1e-9*(double)nsec; 
+		};
 		T& fromSec(double t) {
 			sec = (uint32_t)floor(t);
 			nsec = (uint32_t)boost::math::round((t - sec) * 1e9);
@@ -143,7 +137,9 @@ namespace  ros //DataStucture
 			return *static_cast<T*>(this);
 		}
 
-		uint64_t toNSec() const { return (uint64_t)sec * 1000000000ull + (uint64_t)nsec; }
+		uint64_t toNSec() const { 
+			return (uint64_t)sec * 1000000000ull + (uint64_t)nsec; 
+		}
 		T& fromNSec(uint64_t t);
 
 		inline bool isZero() const { return sec == 0 && nsec == 0; }
@@ -151,11 +147,10 @@ namespace  ros //DataStucture
 	};
 
 	/**
-	 * \brief Time representation.  May either represent wall clock time or ROS clock time.
-	 *
+	 * \brief Time representation.May either represent wall clock time or ROS clock time.
 	 * ros::TimeBase provides most of its functionality.
 	 */
-	class  Time : public TimeBase<Time>
+	class Time : public TimeBase<Time>
 	{
 	public:
 		Time()

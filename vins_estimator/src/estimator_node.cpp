@@ -14,41 +14,33 @@
 #include "camodocal/camera_models/CameraFactory.h"
 #include "camodocal/camera_models/CataCamera.h"
 #include "camodocal/camera_models/PinholeCamera.h"
-/****************** load image section ***********************/
+
+// load image
 #include <iostream>
 #include <fstream>
 #include <chrono>
-/****************** load image section ***********************/
 
-/****************** feature tracker section ***********************/
+// feature track
 #include "../../include/PointCloud.h"
 #include "../../include/Imu.h"
 #include "feature_tracker/feature_tracker.h"
 
-/************************* visualization ***********************/
+// visualization
 #include <pangolin/pangolin.h>
 
 #define SHOW_UNDISTORTION 0
 
-vector<uchar> r_status;
-vector<float> r_err;
-
-//ros::Publisher pub_img,pub_match;
-//ros::Publisher pub_match;
-
+std::vector<uchar> r_status;
+std::vector<float> r_err;
 FeatureTracker trackerData[NUM_OF_CAM];
 double first_image_time;
 int pub_count = 1;
 bool first_image_flag = true;
 bool running_flag = true;
 bool view_done = false;
-/****************** feature tracker section ***********************/
-
-/****************** load image section ***********************/
-using namespace std;
-/****************** load image section ***********************/
 
 Estimator estimator;
+LoopClosure *loop_closure;
 
 std::condition_variable con;
 double current_time = -1;
@@ -59,8 +51,8 @@ queue<int> optimize_posegraph_buf;
 queue<KeyFrame*> keyframe_buf;
 queue<RetriveData> retrive_data_buf;
 
+// 闭环检测相关成员变量
 int sum_of_wait = 0;
-
 std::mutex m_buf;
 std::mutex m_state;
 std::mutex i_buf;
@@ -80,66 +72,63 @@ Eigen::Vector3d acc_0;
 Eigen::Vector3d gyr_0;
 
 queue<pair<cv::Mat, double>> image_buf;
-LoopClosure *loop_closure;
 KeyFrameDatabase keyframe_database;
 
 int global_frame_cnt = 0;
-//camera param
 camodocal::CameraPtr m_camera;
-vector<int> erase_index;
+std::vector<int> erase_index;
 std_msgs::Header cur_header;
 Eigen::Vector3d relocalize_t{Eigen::Vector3d(0, 0, 0)};
 Eigen::Matrix3d relocalize_r{Eigen::Matrix3d::Identity()};
-
 nav_msgs::Path  loop_path;
+
 void updateLoopPath(nav_msgs::Path _loop_path)
 {
     loop_path = _loop_path;
 }
-void ViewCameraPose(Eigen::Vector3d loop_correct_t, Eigen::Matrix3d loop_correct_r, pangolin::OpenGlMatrix &M)
+
+void ViewCameraPose(Eigen::Vector3d loop_correct_t, 
+	Eigen::Matrix3d loop_correct_r, pangolin::OpenGlMatrix &M)
 {
 	int idx2 = WINDOW_SIZE - 1;
 	if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
 	{
 		int i = idx2;
-		Vector3d P = (loop_correct_r * estimator.Ps[i] + loop_correct_t) + (loop_correct_r * estimator.Rs[i]) * estimator.tic[0];
-		//Quaterniond R = Quaterniond((loop_correct_r * estimator.Rs[i]) * estimator.ric[0]);
+		Eigen::Vector3d P = (loop_correct_r * estimator.Ps[i] + loop_correct_t) +
+			(loop_correct_r * estimator.Rs[i]) * estimator.tic[0];
 		Eigen::Matrix3d R = (loop_correct_r * estimator.Rs[i]) * estimator.ric[0];
 
-		M.m[0] = R(0,0); 
-		M.m[1] = R(1,0); 
-		M.m[2] = R(2,0); 
-		M.m[3] = 0.0; 
+		M.m[0] = R(0, 0);
+		M.m[1] = R(1, 0);
+		M.m[2] = R(2, 0);
+		M.m[3] = 0.0;
 
-		M.m[4] = R(0,1); 
-		M.m[5] = R(1,1); 
-		M.m[6] = R(2,1); 
-		M.m[7] = 0.0; 
+		M.m[4] = R(0, 1);
+		M.m[5] = R(1, 1);
+		M.m[6] = R(2, 1);
+		M.m[7] = 0.0;
 
-		M.m[8] = R(0,2); 
-		M.m[9] = R(1,2); 
-		M.m[10] = R(2,2); 
-		M.m[11] = 0.0; 
-		
-		
-		M.m[12] = P.x(); 
-		M.m[13] = P.y(); 
-		M.m[14] = P.z(); 
-		M.m[15] = 1.0;	
-	//    cout << "M.m[0]:" <<M.m[0] << "M.m[1]:" << M.m[1] << "M.m[2]" << M.m[2] << endl; 	
-	//    cout << "M.m[4]:" <<M.m[4] << "M.m[5]:" << M.m[5] << "M.m[6]" << M.m[6] << endl; 	
-	//    cout << "M.m[8]:" <<M.m[8] << "M.m[9]:" << M.m[9] << "M.m[10]" << M.m[10] << endl; 	
-	  //  cout << "M.m[12]:" <<M.m[12] << "M.m[13]:" << M.m[13] << "M.m[14]" << M.m[14] << endl; 	
+		M.m[8] = R(0, 2);
+		M.m[9] = R(1, 2);
+		M.m[10] = R(2, 2);
+		M.m[11] = 0.0;
 
+
+		M.m[12] = P.x();
+		M.m[13] = P.y();
+		M.m[14] = P.z();
+		M.m[15] = 1.0;
 	}
-	else
-		 M.SetIdentity();
+	else {
+		M.SetIdentity();
+	}
 }
+
 void DrawCurrentCamera(pangolin::OpenGlMatrix &Twc)
 {
-	const float &w = 0.08f; //mCameraSize;
-	const float h = w*0.75;
-	const float z = w*0.6;
+	const float &w = 0.08f;
+	const float h = w * 0.75;
+	const float z = w * 0.6;
 
 	glPushMatrix();
 
@@ -149,9 +138,9 @@ void DrawCurrentCamera(pangolin::OpenGlMatrix &Twc)
 	glMultMatrixd(Twc.m);
 #endif
 
-	glLineWidth(2);  //set line width
-	glColor3f(0.0f,0.0f,1.0f);   //blue
-	glBegin(GL_LINES);           //draw camera 
+	glLineWidth(2);				//set line width
+	glColor3f(0.0f,0.0f,1.0f);	//blue
+	glBegin(GL_LINES);			//draw camera 
 	glVertex3f(0,0,0);
 	glVertex3f(w,h,z);
 	glVertex3f(0,0,0);
@@ -172,55 +161,53 @@ void DrawCurrentCamera(pangolin::OpenGlMatrix &Twc)
 	glEnd();
 	glPopMatrix();
 }
+
 void visualization()
 {
 	float mViewpointX = -0;
 	float mViewpointY = -5;
 	float mViewpointZ = -10;
 	float mViewpointF = 500;
-	pangolin::CreateWindowAndBind("VINS: Map Visualization",1024,768); //create a display window
-	glEnable(GL_DEPTH_TEST); //launch depth test
-	glEnable(GL_BLEND);      //use blend function
-	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA); //set blend alpha value
-	pangolin::CreatePanel("menu").SetBounds(0.0,1.0,0.0,pangolin::Attach::Pix(175)); //new button and menu
+	pangolin::CreateWindowAndBind("VINS: Map Visualization",1024,768);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+	pangolin::CreatePanel("menu").SetBounds(0.0,1.0,0.0,pangolin::Attach::Pix(175));
  	pangolin::Var<bool> menuFollowCamera("menu.Follow Camera", true, true);
  	pangolin::Var<bool> menuShowPoints("menu.Show Points", true, true);
  	pangolin::Var<bool> menuShowPath("menu.Show Path", true, true);
+
    	// Define Camera Render Object (for view / scene browsing)
 	pangolin::OpenGlRenderState s_cam(
-				    pangolin::ProjectionMatrix(1024,768,mViewpointF,mViewpointF,512,389,0.1,1000),
-				    pangolin::ModelViewLookAt(mViewpointX,mViewpointY,mViewpointZ, 0,0,0,VISUALLOOKATX, VISUALLOOKATY, VISUALLOOKATZ)
-					);
+		pangolin::ProjectionMatrix(1024, 768, mViewpointF, mViewpointF, 512, 389, 0.1, 1000),
+		pangolin::ModelViewLookAt(mViewpointX, mViewpointY, mViewpointZ, 0, 0, 0, VISUALLOOKATX, VISUALLOOKATY, VISUALLOOKATZ)
+	);
 
-// Add named OpenGL viewport to window and provide 3D Handler
-        pangolin::View& d_cam = pangolin::CreateDisplay()
-                    .SetBounds(0.0, 1.0, pangolin::Attach::Pix(175), 1.0, -1024.0f/768.0f)
-		    .SetHandler(new pangolin::Handler3D(s_cam));
+	// Add named OpenGL viewport to window and provide 3D Handler
+	pangolin::View& d_cam = pangolin::CreateDisplay()
+		.SetBounds(0.0, 1.0, pangolin::Attach::Pix(175), 1.0, -1024.0f / 768.0f)
+		.SetHandler(new pangolin::Handler3D(s_cam));
 	
 	pangolin::OpenGlMatrix Twc;
 	Twc.SetIdentity();
-	while(!pangolin::ShouldQuit() & running_flag)
+	while (!pangolin::ShouldQuit() & running_flag)
 	{
-	  
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		ViewCameraPose(relocalize_t, relocalize_r, Twc);
-	        if(menuFollowCamera)
-		   s_cam.Follow(Twc);
+		if (menuFollowCamera)
+			s_cam.Follow(Twc);
 		d_cam.Activate(s_cam);
-		glClearColor(0.0f,0.0f,0.0f,0.0f); //背景色设置为白色
-		DrawCurrentCamera(Twc);		
-		if(menuShowPoints)
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f); //背景色设置为白色
+		DrawCurrentCamera(Twc);
+		if (menuShowPoints)
 			keyframe_database.viewPointClouds();
-		if(menuShowPath)
+		if (menuShowPath)
 			keyframe_database.viewPath();
 		pangolin::FinishFrame();
-
 	}
-	cout << "pangolin thread end" << endl;
-    view_done = true;	
-	//exit(1);
+	std::cout << "visualization thread end." << std::endl;
+	view_done = true;
 }
-
 
 void predict(const sensor_msgs::ImuConstPtr &imu_msg)
 {
@@ -316,27 +303,23 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
 {
     m_buf.lock();
     imu_buf.push(imu_msg);
-   // ROS_INFO("----------IMU DATA. timestamp %f------------",imu_msg->header.stamp.toSec());
     m_buf.unlock();
-  //  con.notify_one();   //remove by solomon
-    
-
+	//con.notify_one();   
+   
     {
         std::lock_guard<std::mutex> lg(m_state);
         predict(imu_msg);
-   //     std_msgs::Header header = imu_msg->header;
-    //    header.frame_id = "world";
-     //   if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
-      //      pubLatestOdometry(tmp_P, tmp_Q, tmp_V, header);
+        /*std_msgs::Header header = imu_msg->header;
+        header.frame_id = "world";
+        if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
+            pubLatestOdometry(tmp_P, tmp_Q, tmp_V, header);*/
     }
 }
 
 void feature_callback(const sensor_msgs::PointCloudConstPtr &feature_msg)
 {
     m_buf.lock();
-    
     feature_buf.push(feature_msg);
-    //ROS_INFO("----------feature timestamp %f------------",feature_msg->header.stamp.toSec());
     m_buf.unlock();
     con.notify_one();
 }
@@ -592,7 +575,7 @@ void process_pose_graph()
         }
 
         std::chrono::milliseconds dura(5000);
-        std::this_thread::sleep_for(dura);
+		std::this_thread::sleep_for(dura);
     }
 }
 
@@ -733,11 +716,10 @@ void process()
         m_state.lock();
         if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
             update();
-        m_state.unlock();
-        m_buf.unlock();
+		m_state.unlock();
+		m_buf.unlock();
     }
 }
-
 
 void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 {
