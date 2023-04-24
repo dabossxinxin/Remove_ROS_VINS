@@ -7,6 +7,7 @@
 #include <opencv2/opencv.hpp>
 #include "estimator.h"
 #include "parameters.h"
+#include "utility/print.h"
 #include "utility/visualization.h"
 #include "loop-closure/loop_closure.h"
 #include "loop-closure/keyframe.h"
@@ -254,9 +255,8 @@ void update()
     gyr_0 = estimator.gyr_0;
 
     queue<sensor_msgs::ImuConstPtr> tmp_imu_buf = imu_buf;
-    for (sensor_msgs::ImuConstPtr tmp_imu_msg; !tmp_imu_buf.empty(); tmp_imu_buf.pop())
-        predict(tmp_imu_buf.front());
-
+	for (sensor_msgs::ImuConstPtr tmp_imu_msg; !tmp_imu_buf.empty(); tmp_imu_buf.pop())
+		predict(tmp_imu_buf.front());
 }
 
 std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>, sensor_msgs::PointCloudConstPtr>>
@@ -266,16 +266,14 @@ getMeasurements()
 
     while (true)
     {
-      
         if (imu_buf.empty() || feature_buf.empty())	   
             return measurements;
-        if (!(imu_buf.back()->header.stamp > feature_buf.front()->header.stamp))
-        {
-       //     ROS_WARN("wait for imu, only should happen at the beginning");
-	    cout << "WARN: wait for imu, only should happen at the beginning" << endl;
-            sum_of_wait++;
-            return measurements;
-        }
+		if (!(imu_buf.back()->header.stamp > feature_buf.front()->header.stamp))
+		{
+			std::cout << "WARN: wait for imu, only should happen at the beginning" << endl;
+			sum_of_wait++;
+			return measurements;
+		}
 
         if (!(imu_buf.front()->header.stamp < feature_buf.front()->header.stamp))
         {
@@ -982,15 +980,12 @@ void LoadImus(ifstream & fImus, const ros::Time &imageTimestamp)
 		}
 	}
 }
-/******************* load IMU end ***********************/
 
 int main(int argc, char **argv)
 {
-	/******************* load image begin ***********************/
-	if (argc != 5)
-	{
-		cerr << endl << "Usage: ./vins_estimator path_to_setting_file path_to_image_folder path_to_times_file path_to_imu_data_file" << endl;
-		return 1;
+	if (argc != 5) {
+		console::print_error("Usage: ./vins_estimator path_to_setting_file path_to_image_folder path_to_times_file path_to_imu_data_file\n");
+		return -1;
 	}
 
 	//imu data file 
@@ -1000,23 +995,25 @@ int main(int argc, char **argv)
 	cv::Mat image;
 	int ni;//num image
 
-	//read parameters section
 	readParameters(argv[1]);
 
 	estimator.setParameter();
 	for (int i = 0; i < NUM_OF_CAM; i++)
-		trackerData[i].readIntrinsicParameter(CAM_NAMES[i]); //add
+		trackerData[i].readIntrinsicParameter(CAM_NAMES[i]);
 
-	vector<string> vStrImagesFileNames;
-	vector<double> vTimeStamps;
+	std::vector<string> vStrImagesFileNames;
+	std::vector<double> vTimeStamps;
 	LoadImages(string(argv[2]), string(argv[3]), vStrImagesFileNames, vTimeStamps);
 
 	int imageNum = vStrImagesFileNames.size();
 
-	if (imageNum <= 0)
-	{
-		cerr << "ERROR: Failed to load images" << endl;
+	if (imageNum <= 0){
+		console::print_error("ERROR: Failed to load images\n");
 		return 1;
+	}
+	else {
+		console::print_highlight("load image num: ");
+		console::print_value("%d\n", imageNum);
 	}
 
 	std::thread measurement_process{ process };
@@ -1050,10 +1047,9 @@ int main(int argc, char **argv)
 		//read image from file
 		image = cv::imread(vStrImagesFileNames[ni], CV_LOAD_IMAGE_UNCHANGED);
 
-		if (image.empty())
-		{
-			cerr << endl << "Failed to load image: " << vStrImagesFileNames[ni] << endl;
-			return 1;
+		if (image.empty()) {
+			console::print_error("Failed to load image: %s\n", vStrImagesFileNames[ni]);
+			return -1;
 		}
 		std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 		img_callback(image, image_timestamp);

@@ -2,9 +2,9 @@
 #include <string>
 #include <iostream>
 #include <direct.h>
+#include "utility/print.h"
 
 #define FILENAMEPATH_MAX 80
-using namespace std;
 
 double INIT_DEPTH;
 double MIN_PARALLAX;
@@ -56,12 +56,9 @@ float VISUALLOOKATZ;
 
 void readParameters(const string & config_file)
 {
-
-
     cv::FileStorage fsSettings(config_file.c_str(), cv::FileStorage::READ);
-    if(!fsSettings.isOpened())
-    {
-        std::cerr << "ERROR: Wrong path to settings " << config_file << std::endl;
+    if(!fsSettings.isOpened()) {
+		console::print_error("ERROR:Wrong path to settings: \n", config_file);
     }
 
 	// 获取当前工作目录：window平台
@@ -95,28 +92,21 @@ void readParameters(const string & config_file)
     G.z() = fsSettings["g_norm"];
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
-    if (ESTIMATE_EXTRINSIC == 2)
-    {
-      //  ROS_WARN("have no prior about extrinsic param, calibrate extrinsic param");
-	cout << "WARN: have no prior about extrinsic param, calibrate extrinsic param" << endl;
-        RIC.push_back(Eigen::Matrix3d::Identity());
-        TIC.push_back(Eigen::Vector3d::Zero());
-        fsSettings["ex_calib_result_path"] >> EX_CALIB_RESULT_PATH;
-        EX_CALIB_RESULT_PATH = VINS_FOLDER_PATH + EX_CALIB_RESULT_PATH;
-
-    }
-    else 
-    {
-        if ( ESTIMATE_EXTRINSIC == 1)
-        {
-          //  ROS_WARN(" Optimize extrinsic param around initial guess!");
-	  cout << "WARN: Optimize extrinsic param around initial guess!" << endl;
+	if (ESTIMATE_EXTRINSIC == 2) {
+		console::print_warn("WARN: have no prior about extrinsic param, calibrate extrinsic param\n");
+		RIC.push_back(Eigen::Matrix3d::Identity());
+		TIC.push_back(Eigen::Vector3d::Zero());
+		fsSettings["ex_calib_result_path"] >> EX_CALIB_RESULT_PATH;
+		EX_CALIB_RESULT_PATH = VINS_FOLDER_PATH + EX_CALIB_RESULT_PATH;
+	}
+    else  {
+        if ( ESTIMATE_EXTRINSIC == 1) {
+			console::print_warn("WARN: Optimize extrinsic param around initial guess!\n");
             fsSettings["ex_calib_result_path"] >> EX_CALIB_RESULT_PATH;
-            EX_CALIB_RESULT_PATH = VINS_FOLDER_PATH + EX_CALIB_RESULT_PATH;
+			EX_CALIB_RESULT_PATH = VINS_FOLDER_PATH + EX_CALIB_RESULT_PATH;
         }
-        if (ESTIMATE_EXTRINSIC == 0)
-          //  ROS_WARN(" fix extrinsic param ");
-	  cout << "WARN: fix extrinsic param "<< endl;
+		if (ESTIMATE_EXTRINSIC == 0)
+			console::print_warn("WARN: fix extrinsic param\m");
 
         cv::Mat cv_R, cv_T;
         fsSettings["extrinsicRotation"] >> cv_R;
@@ -129,28 +119,34 @@ void readParameters(const string & config_file)
         eigen_R = Q.normalized();
         RIC.push_back(eigen_R);
         TIC.push_back(eigen_T);
-     //   ROS_INFO_STREAM("Extrinsic_R : " << std::endl << RIC[0]);
-    //    ROS_INFO_STREAM("Extrinsic_T : " << std::endl << TIC[0].transpose());
-	cout << "Extrinsic_R : " << std::endl << RIC[0] << endl;
-	cout << "Extrinsic_T : " << std::endl << TIC[0].transpose() << endl;
-        
+
+		console::print_highlight("Extrinsic_R:\n");
+		console::print_value("%f\t", RIC[0](0, 0));
+		console::print_value("%f\t", RIC[0](0, 1));
+		console::print_value("%f\n", RIC[0](0, 2));
+		console::print_value("%f\t", RIC[0](1, 0));
+		console::print_value("%f\t", RIC[0](1, 1));
+		console::print_value("%f\n", RIC[0](1, 2));
+		console::print_value("%f\t", RIC[0](2, 0));
+		console::print_value("%f\t", RIC[0](2, 1));
+		console::print_value("%f\n", RIC[0](2, 2));
+		console::print_highlight("Extrinsic_T:\n");
+		console::print_value("%f\t", TIC[0](0));
+		console::print_value("%f\t", TIC[0](1));
+		console::print_value("%f\n", TIC[0](2));
     } 
 
-
-
-    LOOP_CLOSURE = fsSettings["loop_closure"];
-    if (LOOP_CLOSURE == 1)
-    {
+	LOOP_CLOSURE = fsSettings["loop_closure"];
+    if (LOOP_CLOSURE == 1) {
         fsSettings["voc_file"] >> VOC_FILE;;
         fsSettings["pattern_file"] >> PATTERN_FILE;
         VOC_FILE = VINS_FOLDER_PATH + VOC_FILE;
         PATTERN_FILE = VINS_FOLDER_PATH + PATTERN_FILE;
-        MIN_LOOP_NUM = fsSettings["min_loop_num"];
+		MIN_LOOP_NUM = fsSettings["min_loop_num"];
         CAM_NAMES_ESTIMATOR = config_file;   //add
     }
 
-
-    INIT_DEPTH = 5.0;
+	INIT_DEPTH = 5.0;
     BIAS_ACC_THRESHOLD = 0.1;
     BIAS_GYR_THRESHOLD = 0.1;
     MAX_KEYFRAME_NUM = 1000;
