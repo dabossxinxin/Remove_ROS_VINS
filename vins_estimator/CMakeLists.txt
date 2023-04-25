@@ -3,8 +3,8 @@ project(vins_estimator)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++11")
-set(CMAKE_CXX_FLAGS_DEBUG "/bigobj /EHsc")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 /bigobj /EHsc")
+#set(CMAKE_CXX_FLAGS_DEBUG "/bigobj /EHsc")
+#set(CMAKE_CXX_FLAGS_RELEASE "-O2 /bigobj /EHsc")
 
 include_directories(${CMAKE_SOURCE_DIR}/../camera_model/include)
 

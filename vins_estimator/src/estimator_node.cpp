@@ -1039,10 +1039,10 @@ int main(int argc, char **argv)
 
 		// 读取IMU数据以及对应的相机数据
 		LoadImus(fImus, image_timestamp);
-		image = cv::imread(vStrImagesFileNames[ni], CV_LOAD_IMAGE_UNCHANGED);
+		image = cv::imread(vStrImagesFileNames[ni], cv::IMREAD_GRAYSCALE);
 
 		if (image.empty()) {
-			console::print_error("Failed to load image: %s\n", vStrImagesFileNames[ni]);
+			console::print_error("Failed to load image: %s\n", vStrImagesFileNames[ni].c_str());
 			return -1;
 		}
 
@@ -1065,8 +1065,12 @@ int main(int argc, char **argv)
 
 	running_flag = false;
 	while (!view_done) {
-		Sleep(5);
-	}
+#ifdef _WIN_
+        Sleep(5);
+#elif _OSX_
+        sleep(5);
+#endif
+    }
 
 	return 0;
 }
