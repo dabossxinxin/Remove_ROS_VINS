@@ -69,7 +69,7 @@ void KeyFrame::buildKeyFrameFeatures(Estimator &estimator, const camodocal::Came
             //features current measurements
             Vector3d point = it_per_id.feature_per_frame[WINDOW_SIZE - 2 - it_per_id. start_frame].point;
             Vector2d point_uv;
-            m_camera->spaceToPlane(point, point_uv);
+			m_camera->spaceToPlane(point, point_uv);
             measurements.push_back(cv::Point2f(point_uv.x(), point_uv.y()));
             pts_normalize.push_back(cv::Point2f(point.x()/point.z(), point.y()/point.z()));
             features_id.push_back(it_per_id.feature_id);

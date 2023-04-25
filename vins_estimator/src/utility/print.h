@@ -224,4 +224,13 @@ namespace console
 	  */
 	void
 		print(VERBOSITY_LEVEL level, const char *format, ...);
+
+	/** \brief Print a matrix
+	  * \param data matrix data
+	  * \param rows matrix rows
+	  * \param cols matrix cols
+	  * \param method 0 (major col) 1 (major row)
+	  */
+	void
+		print_matrix(double* data, int rows, int cols, int method = 0);
 }

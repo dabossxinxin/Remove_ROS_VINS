@@ -8,6 +8,7 @@
 #include "estimator.h"
 #include "parameters.h"
 #include "utility/print.h"
+#include "utility/tic_toc.h"
 #include "utility/visualization.h"
 #include "loop-closure/loop_closure.h"
 #include "loop-closure/keyframe.h"
@@ -228,18 +229,18 @@ void predict(const sensor_msgs::ImuConstPtr &imu_msg)
 
     Eigen::Vector3d un_acc_0 = tmp_Q * (acc_0 - tmp_Ba - tmp_Q.inverse() * estimator.g);
 
-    Eigen::Vector3d un_gyr = 0.5 * (gyr_0 + angular_velocity) - tmp_Bg;
-    tmp_Q = tmp_Q * Utility::deltaQ(un_gyr * dt);
+	Eigen::Vector3d un_gyr = 0.5 * (gyr_0 + angular_velocity) - tmp_Bg;
+	tmp_Q = tmp_Q * Utility::deltaQ(un_gyr * dt);
 
     Eigen::Vector3d un_acc_1 = tmp_Q * (linear_acceleration - tmp_Ba - tmp_Q.inverse() * estimator.g);
 
-    Eigen::Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);
+	Eigen::Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);
 
-    tmp_P = tmp_P + dt * tmp_V + 0.5 * dt * dt * un_acc;
-    tmp_V = tmp_V + dt * un_acc;
+	tmp_P = tmp_P + dt * tmp_V + 0.5 * dt * dt * un_acc;
+	tmp_V = tmp_V + dt * un_acc;
 
-    acc_0 = linear_acceleration;
-    gyr_0 = angular_velocity;
+	acc_0 = linear_acceleration;
+	gyr_0 = angular_velocity;
 }
 
 void update()
@@ -910,32 +911,29 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 	//  ROS_INFO("whole feature tracker processing costs: %f", t_r.toc());
 
 }
-/******************* load image begin ***********************/
-void LoadImages(const string &strImagePath, const string &strTimesStampsPath,
-		vector<string> &strImagesFileNames, vector<double> &timeStamps)
-{
-    ifstream fTimes;
-    fTimes.open(strTimesStampsPath.c_str());
-    timeStamps.reserve(5000); //reserve vector space
-    strImagesFileNames.reserve(5000); 
-    while(!fTimes.eof())
-    {
-	string s;
-	getline(fTimes,s);
-	if(!s.empty())
-	{
-	    stringstream ss;
-	    ss << s;
-	    strImagesFileNames.push_back(strImagePath + "/" + ss.str() + ".png");
-	    double t;
-	    ss >> t;
-	    timeStamps.push_back(t/1e9);
-	}
-    }
-}
-/******************* load image end ***********************/
 
-/******************* load IMU begin ***********************/
+void LoadImages(const string &strImagePath, const string &strTimesStampsPath,
+	vector<string> &strImagesFileNames, vector<double> &timeStamps)
+{
+	ifstream fTimes;
+	fTimes.open(strTimesStampsPath.c_str());
+	timeStamps.reserve(5000); //reserve vector space
+	strImagesFileNames.reserve(5000);
+	while (!fTimes.eof())
+	{
+		string s;
+		getline(fTimes, s);
+		if (!s.empty())
+		{
+			stringstream ss;
+			ss << s;
+			strImagesFileNames.push_back(strImagePath + "/" + ss.str() + ".png");
+			double t;
+			ss >> t;
+			timeStamps.push_back(t / 1e9);
+		}
+	}
+}
 
 void LoadImus(ifstream & fImus, const ros::Time &imageTimestamp)
 {
@@ -946,7 +944,7 @@ void LoadImus(ifstream & fImus, const ros::Time &imageTimestamp)
 		if (!s.empty())
 		{
 			char c = s.at(0);
-			if (c<'0' || c>'9')      //remove first line in data.csv
+			if (c<'0' || c>'9') //remove first line in data.csv
 				continue;
 			stringstream ss;
 			ss << s;
@@ -988,12 +986,11 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//imu data file 
 	ifstream fImus;
 	fImus.open(argv[4]);
 
 	cv::Mat image;
-	int ni;//num image
+	int ni = 0;
 
 	readParameters(argv[1]);
 
@@ -1006,18 +1003,16 @@ int main(int argc, char **argv)
 	LoadImages(string(argv[2]), string(argv[3]), vStrImagesFileNames, vTimeStamps);
 
 	int imageNum = vStrImagesFileNames.size();
-
 	if (imageNum <= 0){
 		console::print_error("ERROR: Failed to load images\n");
 		return 1;
 	}
 	else {
-		console::print_highlight("load image num: ");
+		console::print_highlight("Load image num: ");
 		console::print_value("%d\n", imageNum);
 	}
 
 	std::thread measurement_process{ process };
-
 	measurement_process.detach();
 
 	std::thread loop_detection, pose_graph;
@@ -1025,53 +1020,53 @@ int main(int argc, char **argv)
 	{
 		loop_detection = std::thread(process_loop_detection);
 		pose_graph = std::thread(process_pose_graph);
-		std::thread visualization_thread{ visualization }; //visualization thread
+		std::thread visualization_thread{ visualization };
 		loop_detection.detach();
 		pose_graph.detach();
 		visualization_thread.detach();
 		//loop_detection.join();
 		//pose_graph.join();
-		m_camera = CameraFactory::instance()->generateCameraFromYamlFile(CAM_NAMES_ESTIMATOR);
+		//m_camera = CameraFactory::instance()->generateCameraFromYamlFile(CAM_NAMES_ESTIMATOR);
 	}
-	for (ni = 0; ni < imageNum; ni++)
-	{
 
-		double  tframe = vTimeStamps[ni];   //timestamp
-		uint32_t  sec = tframe;
+	for (ni = 0; ni < imageNum; ++ni)
+	{
+		double tframe = vTimeStamps[ni];   //timestamp
+		uint32_t sec = tframe;
 		uint32_t nsec = (tframe - sec)*1e9;
 		nsec = (nsec / 1000) * 1000 + 500;
 		ros::Time image_timestamp = ros::Time(sec, nsec);
-		// read imu data
-		LoadImus(fImus, image_timestamp);
 
-		//read image from file
+		// 读取IMU数据以及对应的相机数据
+		LoadImus(fImus, image_timestamp);
 		image = cv::imread(vStrImagesFileNames[ni], CV_LOAD_IMAGE_UNCHANGED);
 
 		if (image.empty()) {
 			console::print_error("Failed to load image: %s\n", vStrImagesFileNames[ni]);
 			return -1;
 		}
-		std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+
+		TicToc img_callback_time;
 		img_callback(image, image_timestamp);
-		std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-		double timeSpent = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
+		console::print_value("img callback time: %dms\n", int(img_callback_time.toc()));
 
 		//wait to load the next frame image
-		double T = 0;
-		if (ni < imageNum - 1)
-			T = vTimeStamps[ni + 1] - tframe; //interval time between two consecutive frames,unit:second
-		else if (ni > 0)    //lastest frame
-			T = tframe - vTimeStamps[ni - 1];
+		//double T = 0;
+		//if (ni < imageNum - 1)
+		//	T = vTimeStamps[ni + 1] - tframe; //interval time between two consecutive frames,unit:second
+		//else if (ni > 0)    //lastest frame
+		//	T = tframe - vTimeStamps[ni - 1];
 
-		if (timeSpent < T)
-			Sleep((T - timeSpent)*1e6); //sec->us:1e6
-		else
-			cerr << endl << "process image speed too slow, larger than interval time between two consecutive frames" << endl;
-
+		//if (timeSpent < T)
+		//	Sleep((T - timeSpent)*1e6); //sec->us:1e6
+		//else
+		//	cerr << endl << "process image speed too slow, larger than interval time between two consecutive frames" << endl;
 	}
+
 	running_flag = false;
-	while (!view_done)     //main thread wait view thread used its data structure
+	while (!view_done) {
 		Sleep(5);
-	/******************* load image end ***********************/
+	}
+
 	return 0;
 }

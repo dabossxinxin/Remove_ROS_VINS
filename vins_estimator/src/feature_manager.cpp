@@ -344,7 +344,7 @@ void FeatureManager::removeFront(int frame_count)
 
         if (it->start_frame == frame_count)
         {
-            it->start_frame--;
+			it->start_frame--;
         }
         else
         {

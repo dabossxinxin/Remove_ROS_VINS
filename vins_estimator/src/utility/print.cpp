@@ -483,5 +483,25 @@ console::print(console::VERBOSITY_LEVEL level, const char *format, ...)
 	va_end(ap);
 
 	reset_text_color(stream);
+}
 
+void
+console::print_matrix(double* data, int rows, int cols, int method)
+{
+	if (method == 0) {
+		for (int row = 0; row < rows; ++row) {
+			for (int col = 0; col < cols; ++col) {
+				print_value("	%f", data[col*rows + row]);
+			}
+			print_info("\n");
+		}
+	}
+	else if (method = 1) {
+		for (int row = 0; row < rows; ++row) {
+			for (int col = 0; col < cols; ++col) {
+				print_value("	%f", data[row*cols + col]);
+			}
+			print_info("\n");
+		}
+	}
 }

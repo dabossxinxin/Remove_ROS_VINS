@@ -992,8 +992,8 @@ void Estimator::slideWindow()
     TicToc t_margin;
     if (marginalization_flag == MARGIN_OLD)
     {
-        back_R0 = Rs[0];
-        back_P0 = Ps[0];
+		back_R0 = Rs[0];
+		back_P0 = Ps[0];
         if (frame_count == WINDOW_SIZE)
         {
             for (int i = 0; i < WINDOW_SIZE; i++)

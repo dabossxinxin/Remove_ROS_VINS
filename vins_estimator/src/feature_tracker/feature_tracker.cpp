@@ -1,4 +1,5 @@
 #include "feature_tracker.h"
+#include "../utility/print.h"
 
 int FeatureTracker::n_id = 0;
 
@@ -7,7 +8,10 @@ bool inBorder(const cv::Point2f &pt)
     const int BORDER_SIZE = 1;
     int img_x = cvRound(pt.x);
     int img_y = cvRound(pt.y);
-    return BORDER_SIZE <= img_x && img_x < COL - BORDER_SIZE && BORDER_SIZE <= img_y && img_y < ROW - BORDER_SIZE;
+	return BORDER_SIZE <= img_x &&
+		img_x < COL - BORDER_SIZE &&
+		BORDER_SIZE <= img_y &&
+		img_y < ROW - BORDER_SIZE;
 }
 
 void reduceVector(vector<cv::Point2f> &v, vector<uchar> status)
@@ -34,14 +38,13 @@ FeatureTracker::FeatureTracker()
 
 void FeatureTracker::setMask()
 {
-    if(FISHEYE)
-        mask = fisheye_mask.clone();
-    else
-        mask = cv::Mat(ROW, COL, CV_8UC1, cv::Scalar(255));
+	if (FISHEYE)
+		mask = fisheye_mask.clone();
+	else
+		mask = cv::Mat(ROW, COL, CV_8UC1, cv::Scalar(255));
     
-
     // prefer to keep features that are tracked for long time
-    vector<pair<int, pair<cv::Point2f, int>>> cnt_pts_id;
+	vector<pair<int, pair<cv::Point2f, int>>> cnt_pts_id;
 
     for (unsigned int i = 0; i < forw_pts.size(); i++)
         cnt_pts_id.push_back(make_pair(track_cnt[i], make_pair(forw_pts[i], ids[i])));
@@ -180,7 +183,7 @@ void FeatureTracker::rejectWithF()
             m_camera->liftProjective(Eigen::Vector2d(forw_pts[i].x, forw_pts[i].y), tmp_p);
             tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
             tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;
-            un_forw_pts[i] = cv::Point2f(tmp_p.x(), tmp_p.y());
+			un_forw_pts[i] = cv::Point2f(tmp_p.x(), tmp_p.y());
         }
 
         vector<uchar> status;
@@ -210,9 +213,8 @@ bool FeatureTracker::updateID(unsigned int i)
 
 void FeatureTracker::readIntrinsicParameter(const string &calib_file)
 {
-  //  ROS_INFO("reading paramerter of camera %s", calib_file.c_str());
-   cout << "reading paramerter of camera " <<  calib_file.c_str() <<endl;
-    m_camera = CameraFactory::instance()->generateCameraFromYamlFile(calib_file);
+	console::print_highlight("Read camera parameters: %s\n", calib_file.c_str());
+	m_camera = CameraFactory::instance()->generateCameraFromYamlFile(calib_file);
 }
 
 void FeatureTracker::showUndistortion(const string &name)

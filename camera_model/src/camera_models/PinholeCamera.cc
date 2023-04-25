@@ -8,6 +8,7 @@
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
+
 using namespace std;
 
 #include "camodocal/gpl/gpl.h"
@@ -166,8 +167,8 @@ PinholeCamera::Parameters::readFromYamlFile(const std::string& filename)
 
     m_modelType = PINHOLE;
     fs["camera_name"] >> m_cameraName;
-    m_imageWidth = static_cast<int>(fs["image_width"]);
-    m_imageHeight = static_cast<int>(fs["image_height"]);
+	m_imageWidth = static_cast<int>(fs["image_width"]);
+	m_imageHeight = static_cast<int>(fs["image_height"]);
 
     cv::FileNode n = fs["distortion_parameters"];
     m_k1 = static_cast<double>(n["k1"]);
@@ -181,8 +182,8 @@ PinholeCamera::Parameters::readFromYamlFile(const std::string& filename)
     m_cx = static_cast<double>(n["cx"]);
     m_cy = static_cast<double>(n["cy"]);
   
-    cout << "m_k1:" << m_k1 << " m_k2" << m_k2 << " m_p1:"<<m_p1 << " m_p2:" << m_p2<< endl;
-    cout << "m_fx:" << m_fx << " m_fy" << m_fy << " m_cx:"<<m_cx << " m_cy:" << m_cy<< endl;
+    //cout << "m_k1:" << m_k1 << " m_k2" << m_k2 << " m_p1:"<<m_p1 << " m_p2:" << m_p2<< endl;
+    //cout << "m_fx:" << m_fx << " m_fy" << m_fy << " m_cx:"<<m_cx << " m_cy:" << m_cy<< endl;
     return true;
 }
 
@@ -337,6 +338,12 @@ int
 PinholeCamera::imageWidth(void) const
 {
     return mParameters.imageWidth();
+}
+
+double 
+PinholeCamera::fx(void) const
+{
+	return mParameters.fx();
 }
 
 int
