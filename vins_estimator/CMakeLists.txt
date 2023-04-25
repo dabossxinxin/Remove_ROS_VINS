@@ -2,9 +2,12 @@ cmake_minimum_required(VERSION 3.14)
 project(vins_estimator)
 
 set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++11")
-#set(CMAKE_CXX_FLAGS_DEBUG "/bigobj /EHsc")
-#set(CMAKE_CXX_FLAGS_RELEASE "-O2 /bigobj /EHsc")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(_WIN_)
+	set(CMAKE_CXX_FLAGS_DEBUG "/bigobj /EHsc")
+	set(CMAKE_CXX_FLAGS_RELEASE "-O2 /bigobj /EHsc")
+endif()
 
 include_directories(${CMAKE_SOURCE_DIR}/../camera_model/include)
 
