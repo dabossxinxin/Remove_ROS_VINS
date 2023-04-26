@@ -11,10 +11,6 @@
 
 namespace ros
 {
-	/*********************************************************************
-	** Functions
-	*********************************************************************/
-
 	inline void normalizeSecNSec(uint64_t& sec, uint64_t& nsec)
 	{
 		uint64_t nsec_part = nsec % 1000000000UL;

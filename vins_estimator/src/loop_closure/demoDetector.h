@@ -227,9 +227,9 @@ const
 	xs.clear();
 	ys.clear();
 
-	fstream f(filename, ios::in);
+	std::fstream f(filename, std::ios::in);
 
-	string s;
+	std::string s;
 	double ts, x, y, t;
 	while (!f.eof())
 	{

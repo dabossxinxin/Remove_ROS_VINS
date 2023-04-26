@@ -28,7 +28,7 @@ include_directories(${CMAKE_SOURCE_DIR}/../camera_model/include)
 
 ########################################################
 #													   #
-#				  编译camera model库			       #
+#				  编译camera model库			       	   #
 #													   #	
 ########################################################
 file(GLOB CalibHdrs			"../camera_model/include/camodocal/calib/*.h")
@@ -74,7 +74,7 @@ target_link_libraries(camera_model
 
 ########################################################
 #													   #
-#			          编译DBoW库			           #
+#			          编译DBoW库			               #
 #													   #	
 ########################################################
 file(GLOB VocaHdrs		"./src/loop_closure/ThirdParty/*.hpp")

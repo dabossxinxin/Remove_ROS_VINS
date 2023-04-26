@@ -374,7 +374,7 @@ protected:
 		 */
 		std::string toString() const
 		{
-			stringstream ss;
+			std::stringstream ss;
 			ss << "[" << first << "-" << last << ": " << score << " | best: <"
 				<< best_entry << ": " << best_score << "> ] ";
 			return ss.str();
@@ -1149,7 +1149,7 @@ void TemplatedLoopDetector<TDescriptor, F>::getFlannStructure(
 	const std::vector<TDescriptor> &descriptors,
 	cv::FlannBasedMatcher &flann_structure) const
 {
-	vector<cv::Mat> features(1);
+	std::vector<cv::Mat> features(1);
 	F::toMat32F(descriptors, features[0]);
 
 	flann_structure.clear();

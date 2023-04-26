@@ -7,7 +7,7 @@
 #include <map>
 #include <boost/array.hpp>
 
-#include "Time.h"
+#include "RosTime.h"
 #include "Quaternion.h"
 #include "Vector3.h"
 #include "Header.h"
@@ -50,8 +50,6 @@ struct Imu_
       linear_acceleration_covariance.assign(0.0);
   }
 
-
-
    typedef  std_msgs::Header_<ContainerAllocator>  _header_type;
   _header_type header;
 
@@ -73,16 +71,12 @@ struct Imu_
    typedef boost::array<double, 9>  _linear_acceleration_covariance_type;
   _linear_acceleration_covariance_type linear_acceleration_covariance;
 
-
-
-
   typedef boost::shared_ptr< sensor_msgs::Imu_<ContainerAllocator> > Ptr;
   typedef boost::shared_ptr< sensor_msgs::Imu_<ContainerAllocator> const> ConstPtr;
 
 }; // struct Imu_
 
 typedef sensor_msgs::Imu_<std::allocator<void> > Imu;
-
 typedef boost::shared_ptr< sensor_msgs::Imu > ImuPtr;
 typedef boost::shared_ptr< sensor_msgs::Imu const> ImuConstPtr;
 }

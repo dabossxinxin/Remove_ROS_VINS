@@ -496,7 +496,7 @@ console::print_matrix(double* data, int rows, int cols, int method)
 			print_info("\n");
 		}
 	}
-	else if (method = 1) {
+	else if (method == 1) {
 		for (int row = 0; row < rows; ++row) {
 			for (int col = 0; col < cols; ++col) {
 				print_value("	%f", data[row*cols + col]);
