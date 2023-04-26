@@ -11,17 +11,12 @@
 #include "ThirdParty/DVision/DVision.h" // Brief
 
 // OpenCV
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
-
+#include <opencv2/highgui.hpp>
 #include "demoDetector.h"
-//#include "brief_extractor.h"
 
 using namespace DLoopDetector;
 using namespace DBoW2;
 using namespace DVision;
-using namespace std;
-
 
 class LoopClosure
 {

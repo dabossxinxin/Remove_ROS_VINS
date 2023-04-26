@@ -1,14 +1,14 @@
 #include "initial_alignment.h"
 
-void solveGyroscopeBias(map<double, ImageFrame> &all_image_frame, Vector3d* Bgs)
+void solveGyroscopeBias(std::map<double, ImageFrame> &all_image_frame, Vector3d* Bgs)
 {
     Matrix3d A;
     Vector3d b;
     Vector3d delta_bg;
     A.setZero();
     b.setZero();
-    map<double, ImageFrame>::iterator frame_i;
-    map<double, ImageFrame>::iterator frame_j;
+	std::map<double, ImageFrame>::iterator frame_i;
+	std::map<double, ImageFrame>::iterator frame_j;
     for (frame_i = all_image_frame.begin(); next(frame_i) != all_image_frame.end(); frame_i++)
     {
         frame_j = next(frame_i);
@@ -25,7 +25,7 @@ void solveGyroscopeBias(map<double, ImageFrame> &all_image_frame, Vector3d* Bgs)
     }
     delta_bg = A.ldlt().solve(b);
   //  ROS_WARN_STREAM("gyroscope bias initial calibration " << delta_bg.transpose());
-    cout << "gyroscope bias initial calibration " << delta_bg.transpose() << endl;
+	std::cout << "gyroscope bias initial calibration " << delta_bg.transpose() << std::endl;
 
     for (int i = 0; i <= WINDOW_SIZE; i++)
         Bgs[i] += delta_bg;
@@ -53,7 +53,7 @@ MatrixXd TangentBasis(Vector3d &g0)
     return bc;
 }
 
-void RefineGravity(map<double, ImageFrame> &all_image_frame, Vector3d &g, VectorXd &x)
+void RefineGravity(std::map<double, ImageFrame> &all_image_frame, Vector3d &g, VectorXd &x)
 {
     Vector3d g0 = g.normalized() * G.norm();
     Vector3d lx, ly;
@@ -66,8 +66,8 @@ void RefineGravity(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vector
     VectorXd b{n_state};
     b.setZero();
 
-    map<double, ImageFrame>::iterator frame_i;
-    map<double, ImageFrame>::iterator frame_j;
+	std::map<double, ImageFrame>::iterator frame_i;
+	std::map<double, ImageFrame>::iterator frame_j;
     for(int k = 0; k < 4; k++)
     {
         MatrixXd lxly(3, 2);
@@ -123,7 +123,7 @@ void RefineGravity(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vector
     g = g0;
 }
 
-bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, VectorXd &x)
+bool LinearAlignment(std::map<double, ImageFrame> &all_image_frame, Vector3d &g, VectorXd &x)
 {
     int all_frame_count = all_image_frame.size();
     int n_state = all_frame_count * 3 + 3 + 1;
@@ -133,8 +133,8 @@ bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vect
     VectorXd b{n_state};
     b.setZero();
 
-    map<double, ImageFrame>::iterator frame_i;
-    map<double, ImageFrame>::iterator frame_j;
+	std::map<double, ImageFrame>::iterator frame_i;
+	std::map<double, ImageFrame>::iterator frame_j;
     int i = 0;
     for (frame_i = all_image_frame.begin(); next(frame_i) != all_image_frame.end(); frame_i++, i++)
     {
@@ -182,7 +182,7 @@ bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vect
   //  ROS_DEBUG("estimated scale: %f", s);
     g = x.segment<3>(n_state - 4);
     //ROS_DEBUG_STREAM(" result g     " << g.norm() << " " << g.transpose());
-    cout << " result g     " << g.norm() << " " << g.transpose() <<endl;
+	std::cout << " result g     " << g.norm() << " " << g.transpose() << std::endl;
     if(fabs(g.norm() - G.norm()) > 1.0 || s < 0)
     {
         return false;
@@ -192,14 +192,14 @@ bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vect
     s = (x.tail<1>())(0) / 100.0;
     (x.tail<1>())(0) = s;
   //  ROS_DEBUG_STREAM(" refine     " << g.norm() << " " << g.transpose());
-    cout << " refine     " << g.norm() << " " << g.transpose() << endl;
+	std::cout << " refine     " << g.norm() << " " << g.transpose() << std::endl;
     if(s < 0.0 )
         return false;   
     else
         return true;
 }
 
-bool VisualIMUAlignment(map<double, ImageFrame> &all_image_frame, Vector3d* Bgs, Vector3d &g, VectorXd &x)
+bool VisualIMUAlignment(std::map<double, ImageFrame> &all_image_frame, Vector3d* Bgs, Vector3d &g, VectorXd &x)
 {
     solveGyroscopeBias(all_image_frame, Bgs);
 

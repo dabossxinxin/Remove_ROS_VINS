@@ -12,7 +12,6 @@
 
 namespace camodocal
 {
-
 	boost::shared_ptr<CameraFactory> CameraFactory::m_instance;
 
 	CameraFactory::CameraFactory()

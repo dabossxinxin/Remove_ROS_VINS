@@ -1,6 +1,5 @@
 #pragma once
 
-//#include <ros/ros.h>
 #include <vector>
 #include <Eigen/Dense>
 #include "utility/utility.h"
@@ -8,7 +7,6 @@
 #include <opencv2/core/eigen.hpp>
 #include <fstream>
 #include <string>
-using namespace std;
 
 //const double FOCAL_LENGTH = 460.0;
 extern int FOCAL_LENGTH; //add
@@ -16,6 +14,7 @@ const int WINDOW_SIZE = 10;
 const int NUM_OF_CAM = 1;
 const int NUM_OF_F = 1000;
 const double LOOP_INFO_VALUE = 50.0;
+
 //#define DEPTH_PRIOR
 //#define GT
 #define UNIT_SPHERE_ERROR
@@ -74,7 +73,7 @@ extern int EQUALIZE;
 extern int FISHEYE;
 extern bool PUB_THIS_FRAME;
 
-void readParameters(const string & );
+void readParameters(const std::string&);
 
 enum SIZE_PARAMETERIZATION
 {

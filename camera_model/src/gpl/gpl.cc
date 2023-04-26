@@ -1,7 +1,5 @@
 #include "camodocal/gpl/gpl.h"
-#include <math.h>
 #include <set>
-#include <time.h>
 
 // source: https://stackoverflow.com/questions/5167269/clock-gettime-alternative-in-mac-os-x
 #ifdef __APPLE__
@@ -136,35 +134,37 @@ namespace camodocal
 		t.QuadPart -= offset.QuadPart;
 		microseconds = (double)t.QuadPart / frequencyToMicroseconds;
 		t.QuadPart = microseconds;
-		tp->tv_sec = t.QuadPart / 1000000;
-		tp->tv_nsec = (t.QuadPart % 1000000) * 1000;
+		//tp->tv_sec = t.QuadPart / 1000000;
+		//tp->tv_nsec = (t.QuadPart % 1000000) * 1000;
 		return (0);
 	}
 #endif
 
 	unsigned long long timeInMicroseconds(void)
 	{
-		struct timespec tp;
+		//struct timespec tp;
 #ifdef __APPLE__
 		tp = orwl_gettime();
 #else
-		clock_gettime(CLOCKS_PER_SEC, &tp);
+		//clock_gettime(CLOCKS_PER_SEC, &tp);
 #endif
 
-		return tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
+		//return tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
+		return unsigned long long();
 	}
 
 	double timeInSeconds(void)
 	{
-		struct timespec tp;
+		//struct timespec tp;
 #ifdef __APPLE__
 		tp = orwl_gettime();
 #else
-		clock_gettime(CLOCKS_PER_SEC, &tp);
+		//clock_gettime(CLOCKS_PER_SEC, &tp);
 #endif
 
-		return static_cast<double>(tp.tv_sec) +
-			static_cast<double>(tp.tv_nsec) / 1000000000.0;
+		//return static_cast<double>(tp.tv_sec) +
+		//	static_cast<double>(tp.tv_nsec) / 1000000000.0;
+		return double();
 	}
 
 	float colormapAutumn[128][3] =

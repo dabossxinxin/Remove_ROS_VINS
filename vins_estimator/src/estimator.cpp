@@ -108,7 +108,7 @@ void Estimator::processIMU(double dt, const Vector3d &linear_acceleration, const
 
 }
 
-void Estimator::processImage(const map<int, vector<pair<int, Vector3d>>> &image, const std_msgs::Header &header)
+void Estimator::processImage(const std::map<int, std::vector<std::pair<int, Vector3d>>> &image, const std_msgs::Header &header)
 {
    // ROS_DEBUG("new image coming ------------------------------------------");
   //  ROS_DEBUG("Adding feature points %lu", image.size());
@@ -125,7 +125,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Vector3d>>> &image,
 
     ImageFrame imageframe(image, header.stamp.toSec());
     imageframe.pre_integration = tmp_pre_integration;
-    all_image_frame.insert(make_pair(header.stamp.toSec(), imageframe));
+    all_image_frame.insert(std::make_pair(header.stamp.toSec(), imageframe));
     tmp_pre_integration = new IntegrationBase{acc_0, gyr_0, Bas[frame_count], Bgs[frame_count]};
 
     if(ESTIMATE_EXTRINSIC == 2)
@@ -133,7 +133,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Vector3d>>> &image,
        // ROS_INFO("calibrating extrinsic param, rotation movement is needed");
         if (frame_count != 0)
         {
-            vector<pair<Vector3d, Vector3d>> corres = f_manager.getCorresponding(frame_count - 1, frame_count);
+			std::vector<std::pair<Vector3d, Vector3d>> corres = f_manager.getCorresponding(frame_count - 1, frame_count);
             Matrix3d calib_ric;
             if (initial_ex_rotation.CalibrationExRotation(corres, pre_integrations[frame_count]->delta_q, calib_ric))
             {
@@ -211,7 +211,7 @@ bool Estimator::initialStructure()
     TicToc t_sfm;
     //check imu observibility
     {
-        map<double, ImageFrame>::iterator frame_it;
+		std::map<double, ImageFrame>::iterator frame_it;
         Vector3d sum_g;
         for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++)
         {
@@ -239,9 +239,9 @@ bool Estimator::initialStructure()
     }
     // global sfm
     std::vector<Eigen::Quaterniond> Q(frame_count + 1);
-    std::vector<Eigen::Vector3d> T(frame_count + 1);
-    std::map<int, Vector3d> sfm_tracked_points;
-    std::vector<SFMFeature> sfm_f;
+	std::vector<Eigen::Vector3d> T(frame_count + 1);
+	std::map<int, Vector3d> sfm_tracked_points;
+	std::vector<SFMFeature> sfm_f;
     for (auto &it_per_id : f_manager.feature)
     {
         int imu_j = it_per_id.start_frame - 1;
@@ -252,13 +252,13 @@ bool Estimator::initialStructure()
         {
             imu_j++;
             Vector3d pts_j = it_per_frame.point;
-            tmp_feature.observation.push_back(make_pair(imu_j, Eigen::Vector2d{pts_j.x(), pts_j.y()}));
+            tmp_feature.observation.push_back(std::make_pair(imu_j, Eigen::Vector2d{pts_j.x(), pts_j.y()}));
         }
-        sfm_f.push_back(tmp_feature);
+		sfm_f.push_back(tmp_feature);
     } 
-    Matrix3d relative_R;
-    Vector3d relative_T;
-    int l;
+	Matrix3d relative_R;
+	Vector3d relative_T;
+	int l;
     if (!relativePose(relative_R, relative_T, l))
     {
      //   ROS_INFO("Not enough features or parallax; Move device around");
@@ -285,8 +285,8 @@ bool Estimator::initialStructure()
     }
 
     //solve pnp for all frame
-    map<double, ImageFrame>::iterator frame_it;
-    map<int, Vector3d>::iterator it;
+	std::map<double, ImageFrame>::iterator frame_it;
+	std::map<int, Vector3d>::iterator it;
     frame_it = all_image_frame.begin( );
     for (int i = 0; frame_it != all_image_frame.end( ); frame_it++)
     {
@@ -311,8 +311,8 @@ bool Estimator::initialStructure()
         cv::eigen2cv(P_inital, t);
 
         frame_it->second.is_key_frame = false;
-        vector<cv::Point3f> pts_3_vector;
-        vector<cv::Point2f> pts_2_vector;
+		std::vector<cv::Point3f> pts_3_vector;
+		std::vector<cv::Point2f> pts_2_vector;
         for (auto &id_pts : frame_it->second.points)
         {
             int feature_id = id_pts.first;
@@ -407,7 +407,7 @@ bool Estimator::visualInitialAlign()
     for (int i = frame_count; i >= 0; i--)
         Ps[i] = s * Ps[i] - Rs[i] * TIC[0] - (s * Ps[0] - Rs[0] * TIC[0]);
     int kv = -1;
-    map<double, ImageFrame>::iterator frame_i;
+	std::map<double, ImageFrame>::iterator frame_i;
     for (frame_i = all_image_frame.begin(); frame_i != all_image_frame.end(); frame_i++)
     {
         if(frame_i->second.is_key_frame)
@@ -447,7 +447,7 @@ bool Estimator::relativePose(Matrix3d &relative_R, Vector3d &relative_T, int &l)
     // find previous frame which contians enough correspondance and parallex with newest frame
     for (int i = 0; i < WINDOW_SIZE; i++)
     {
-        vector<pair<Vector3d, Vector3d>> corres;
+		std::vector<std::pair<Vector3d, Vector3d>> corres;
         corres = f_manager.getCorresponding(i, WINDOW_SIZE);
         if (corres.size() > 20)
         {
@@ -834,7 +834,7 @@ void Estimator::optimization()
 
         if (last_marginalization_info)
         {
-            vector<int> drop_set;
+			std::vector<int> drop_set;
             for (int i = 0; i < static_cast<int>(last_marginalization_parameter_blocks.size()); i++)
             {
                 if (last_marginalization_parameter_blocks[i] == para_Pose[0] ||
@@ -854,9 +854,9 @@ void Estimator::optimization()
             if (pre_integrations[1]->sum_dt < 10.0)
             {
                 IMUFactor* imu_factor = new IMUFactor(pre_integrations[1]);
-                ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(imu_factor, NULL,
-                                                                           vector<double *>{para_Pose[0], para_SpeedBias[0], para_Pose[1], para_SpeedBias[1]},
-                                                                           vector<int>{0, 1});
+				ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(imu_factor, NULL,
+					std::vector<double *>{para_Pose[0], para_SpeedBias[0], para_Pose[1], para_SpeedBias[1]},
+					std::vector<int>{0, 1});
                 marginalization_info->addResidualBlockInfo(residual_block_info);
             }
         }
@@ -885,9 +885,9 @@ void Estimator::optimization()
 
                     Vector3d pts_j = it_per_frame.point;
                     ProjectionFactor *f = new ProjectionFactor(pts_i, pts_j);
-                    ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
-                                                                                   vector<double *>{para_Pose[imu_i], para_Pose[imu_j], para_Ex_Pose[0], para_Feature[feature_index]},
-                                                                                   vector<int>{0, 3});
+					ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
+						std::vector<double *>{para_Pose[imu_i], para_Pose[imu_j], para_Ex_Pose[0], para_Feature[feature_index]},
+						std::vector<int>{0, 3});
                     marginalization_info->addResidualBlockInfo(residual_block_info);
                 }
             }
@@ -910,7 +910,7 @@ void Estimator::optimization()
         for (int i = 0; i < NUM_OF_CAM; i++)
             addr_shift[reinterpret_cast<long>(para_Ex_Pose[i])] = para_Ex_Pose[i];
 
-        vector<double *> parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
+		std::vector<double *> parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
 
         if (last_marginalization_info)
             delete last_marginalization_info;
@@ -928,7 +928,7 @@ void Estimator::optimization()
             vector2double();
             if (last_marginalization_info)
             {
-                vector<int> drop_set;
+				std::vector<int> drop_set;
                 for (int i = 0; i < static_cast<int>(last_marginalization_parameter_blocks.size()); i++)
                 {
                     //ROS_ASSERT(last_marginalization_parameter_blocks[i] != para_SpeedBias[WINDOW_SIZE - 1]);
@@ -974,7 +974,7 @@ void Estimator::optimization()
             for (int i = 0; i < NUM_OF_CAM; i++)
                 addr_shift[reinterpret_cast<long>(para_Ex_Pose[i])] = para_Ex_Pose[i];
 
-            vector<double *> parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
+			std::vector<double *> parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
             if (last_marginalization_info)
                 delete last_marginalization_info;
             last_marginalization_info = marginalization_info;
@@ -1029,7 +1029,7 @@ void Estimator::slideWindow()
             if (true || solver_flag == INITIAL)
             {
                 double t_0 = Headers[0].stamp.toSec();
-                map<double, ImageFrame>::iterator it_0;
+				std::map<double, ImageFrame>::iterator it_0;
                 it_0 = all_image_frame.find(t_0);
                 delete it_0->second.pre_integration;
                 all_image_frame.erase(all_image_frame.begin(), it_0);

@@ -14,7 +14,7 @@ KeyFrameDatabase::KeyFrameDatabase()
 }
 void KeyFrameDatabase::viewPointClouds()
 {
-	list<KeyFrame*>::iterator iterator_keyframe;
+	std::list<KeyFrame*>::iterator iterator_keyframe;
 	for(iterator_keyframe = keyFrameList.begin(); iterator_keyframe != keyFrameList.end(); iterator_keyframe++)
 	{
 	//	glPushMatrix();
@@ -44,7 +44,7 @@ void KeyFrameDatabase::viewPath()
 	glLineWidth(2);
 	glBegin(GL_LINE_STRIP);
 
-	list<KeyFrame*>::iterator iterator_keyframe;
+	std::list<KeyFrame*>::iterator iterator_keyframe;
 	for(iterator_keyframe = keyFrameList.begin(); iterator_keyframe != keyFrameList.end(); iterator_keyframe++)
 	{
 		(*iterator_keyframe)->getPath(tmp_path);
@@ -55,7 +55,7 @@ void KeyFrameDatabase::viewPath()
 void KeyFrameDatabase::add(KeyFrame* pKF)
 {
 	//ROS_DEBUG("add keyframe begin!");
-	unique_lock<mutex> lock(mMutexkeyFrameList);
+	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
 	keyFrameList.push_back(pKF);
 	lock.unlock();
 	Vector3d P;
@@ -116,17 +116,17 @@ void KeyFrameDatabase::add(KeyFrame* pKF)
 
 }
 
-void KeyFrameDatabase::downsample(vector<int> &erase_index)
+void KeyFrameDatabase::downsample(std::vector<int> &erase_index)
 {
 //	ROS_DEBUG("resample keyframe begin!");
-	unique_lock<mutex> lock(mMutexkeyFrameList);
+	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
 	int frame_num = (int)keyFrameList.size();
 	if (mOptimiazationPosegraph.try_lock())
 	{
 		erase_index.clear();
 		double min_dis = total_length / (frame_num * 0.7);
 
-		list<KeyFrame*>::iterator it = keyFrameList.begin();
+		std::list<KeyFrame*>::iterator it = keyFrameList.begin();
 		Vector3d last_P = Vector3d(0, 0, 0);
 		for (; it != keyFrameList.end(); )   
 		{
@@ -157,7 +157,7 @@ void KeyFrameDatabase::downsample(vector<int> &erase_index)
 
 void KeyFrameDatabase::erase(KeyFrame* pKF)
 {
-	list<KeyFrame*>::iterator it = find(keyFrameList.begin(), keyFrameList.end(), pKF);
+	std::list<KeyFrame*>::iterator it = std::find(keyFrameList.begin(), keyFrameList.end(), pKF);
 	assert(it != keyFrameList.end());
 	if (it != keyFrameList.end())
 	    keyFrameList.erase(it);
@@ -165,14 +165,14 @@ void KeyFrameDatabase::erase(KeyFrame* pKF)
 
 int KeyFrameDatabase::size()
 {
-	unique_lock<mutex> lock(mMutexkeyFrameList);
+	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
 	return (int)keyFrameList.size();
 }
 
-void KeyFrameDatabase::getKeyframeIndexList(vector<int> &keyframe_index_list)
+void KeyFrameDatabase::getKeyframeIndexList(std::vector<int> &keyframe_index_list)
 {
-	unique_lock<mutex> lock(mMutexkeyFrameList);
-	list<KeyFrame*>::iterator it = keyFrameList.begin();
+	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
+	std::list<KeyFrame*>::iterator it = keyFrameList.begin();
 	for (; it != keyFrameList.end(); it++)   
 	{
 		keyframe_index_list.push_back((*it)->global_index);
@@ -182,8 +182,8 @@ void KeyFrameDatabase::getKeyframeIndexList(vector<int> &keyframe_index_list)
 
 KeyFrame* KeyFrameDatabase::getKeyframe(int index)
 {
-	unique_lock<mutex> lock(mMutexkeyFrameList);
-	list<KeyFrame*>::iterator it = keyFrameList.begin();
+	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
+	std::list<KeyFrame*>::iterator it = keyFrameList.begin();
 	for (; it != keyFrameList.end(); it++)   
 	{
 	    if((*it)->global_index == index)
@@ -197,16 +197,16 @@ KeyFrame* KeyFrameDatabase::getKeyframe(int index)
 
 KeyFrame* KeyFrameDatabase::getLastKeyframe()
 {
-	unique_lock<mutex> lock(mMutexkeyFrameList);
-	list<KeyFrame*>::reverse_iterator rit = keyFrameList.rbegin();
+	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
+	std::list<KeyFrame*>::reverse_iterator rit = keyFrameList.rbegin();
 	assert(rit != keyFrameList.rend());
     return *rit;
 }
 
 KeyFrame* KeyFrameDatabase::getLastKeyframe(int last_index)
 {
-	unique_lock<mutex> lock(mMutexkeyFrameList);
-	list<KeyFrame*>::reverse_iterator rit = keyFrameList.rbegin();
+	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
+	std::list<KeyFrame*>::reverse_iterator rit = keyFrameList.rbegin();
 	for (int i = 0; i < last_index; i++)  
     {  
         rit++;
@@ -218,7 +218,7 @@ KeyFrame* KeyFrameDatabase::getLastKeyframe(int last_index)
 void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d &loop_correct_t, Eigen::Matrix3d &loop_correct_r)
 {
 	//ROS_DEBUG("optimizae pose graph begin!");
-	unique_lock<mutex> lock(mOptimiazationPosegraph);
+	std::unique_lock<std::mutex> lock(mOptimiazationPosegraph);
 	KeyFrame* cur_kf = getKeyframe(cur_index);
 	int loop_index = cur_kf->loop_index;
 	if (earliest_loop_index > loop_index || earliest_loop_index == -1)
@@ -244,7 +244,7 @@ void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d 
 	ceres::LocalParameterization* angle_local_parameterization =
 	    AngleLocalParameterization::Create();
 
-	list<KeyFrame*>::iterator it;
+	std::list<KeyFrame*>::iterator it;
 
 	int i = 0;
 	for (it = keyFrameList.begin(); it != keyFrameList.end(); it++)
@@ -361,12 +361,12 @@ void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d 
 void KeyFrameDatabase::updateVisualization()
 {
 	//ROS_DEBUG("updateVisualization begin");
-	unique_lock<mutex> mlockPath(mPath);
-	unique_lock<mutex> mlockPosegraph(mPosegraphVisualization);
+	std::unique_lock<std::mutex> mlockPath(mPath);
+	std::unique_lock<std::mutex> mlockPosegraph(mPosegraphVisualization);
 	total_length = 0;
 	last_P = Vector3d(0, 0, 0);
 	//update visualization
-	list<KeyFrame*>::iterator it;
+	std::list<KeyFrame*>::iterator it;
 //	posegraph_visualization->reset();
 	refine_path.poses.clear();
 
@@ -416,7 +416,7 @@ void KeyFrameDatabase::updateVisualization()
 			posegraph_visualization->add_edge(P, supposed_P);
 			*/
 			
-			list<KeyFrame*>::iterator lit;
+			std::list<KeyFrame*>::iterator lit;
 			lit = it;
 			lit--;
 			Vector3d P_previous;
@@ -449,7 +449,7 @@ void KeyFrameDatabase::updateVisualization()
 
 void KeyFrameDatabase::addLoop(int loop_index)
 {
-	unique_lock<mutex> lock(mPosegraphVisualization);
+	std::unique_lock<std::mutex> lock(mPosegraphVisualization);
 	if (earliest_loop_index > loop_index || earliest_loop_index == -1)
 		earliest_loop_index = loop_index;
 
@@ -464,7 +464,7 @@ void KeyFrameDatabase::addLoop(int loop_index)
 
 nav_msgs::Path KeyFrameDatabase::getPath()
 {
-	unique_lock<mutex> lock(mPath);
+	std::unique_lock<std::mutex> lock(mPath);
 	return refine_path;
 }
 

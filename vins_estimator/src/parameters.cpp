@@ -57,14 +57,14 @@ float VISUALLOOKATX;
 float VISUALLOOKATY;
 float VISUALLOOKATZ;
 
-void readParameters(const string & config_file)
+void readParameters(const std::string & config_file)
 {
-    cv::FileStorage fsSettings(config_file.c_str(), cv::FileStorage::READ);
-    if(!fsSettings.isOpened()) {
+	cv::FileStorage fsSettings(config_file.c_str(), cv::FileStorage::READ);
+	if (!fsSettings.isOpened()) {
 		console::print_error("ERROR:Wrong path to settings: \n", config_file.c_str());
-    }
+	}
 
-    //VINS_FOLDER_PATH = _getcwd(NULL,FILENAMEPATH_MAX);
+	//VINS_FOLDER_PATH = _getcwd(NULL,FILENAMEPATH_MAX);
 	//VINS_FOLDER_PATH = getcwd(NULL, FILENAMEPATH_MAX);
 
 	fsSettings["vins_folder_path"] >> VINS_FOLDER_PATH;

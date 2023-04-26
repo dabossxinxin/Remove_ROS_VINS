@@ -5,15 +5,13 @@
 #include <algorithm>
 #include <vector>
 #include <numeric>
-using namespace std;
-
 #include <Eigen/Dense>
-using namespace Eigen;
-
 //#include <ros/console.h>
 //#include <ros/assert.h>
 #include <assert.h>
 #include "parameters.h"
+
+using namespace Eigen;
 
 class FeaturePerFrame
 {
@@ -39,7 +37,7 @@ class FeaturePerId
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     const int feature_id;
     int start_frame;
-    vector<FeaturePerFrame> feature_per_frame;
+	std::vector<FeaturePerFrame> feature_per_frame;
 
     int used_num;
     bool is_outlier;
@@ -60,37 +58,36 @@ class FeaturePerId
 
 class FeatureManager
 {
-  public:
+public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    FeatureManager(Matrix3d _Rs[]);
+		FeatureManager(Matrix3d _Rs[]);
 
-    void setRic(Matrix3d _ric[]);
+	void setRic(Matrix3d _ric[]);
 
-    void clearState();
+	void clearState();
 
-    int getFeatureCount();
+	int getFeatureCount();
 
-    bool addFeatureCheckParallax(int frame_count, const map<int, vector<pair<int, Vector3d>>> &image);
-    void debugShow();
-    vector<pair<Vector3d, Vector3d>> getCorresponding(int frame_count_l, int frame_count_r);
+	bool addFeatureCheckParallax(int frame_count, const std::map<int, std::vector<std::pair<int, Vector3d>>> &image);
+	void debugShow();
+	std::vector<std::pair<Vector3d, Vector3d>> getCorresponding(int frame_count_l, int frame_count_r);
 
-    //void updateDepth(const VectorXd &x);
-    void setDepth(const VectorXd &x);
-    void removeFailures();
-    void clearDepth(const VectorXd &x);
-    VectorXd getDepthVector();
-    void triangulate(Vector3d Ps[], Vector3d tic[], Matrix3d ric[]);
-    void removeBackShiftDepth(Eigen::Matrix3d marg_R, Eigen::Vector3d marg_P, Eigen::Matrix3d new_R, Eigen::Vector3d new_P);
-    void removeBack();
-    void removeFront(int frame_count);
-    void removeOutlier();
-    list<FeaturePerId> feature;
-    int last_track_num;
+	//void updateDepth(const VectorXd &x);
+	void setDepth(const VectorXd &x);
+	void removeFailures();
+	void clearDepth(const VectorXd &x);
+	VectorXd getDepthVector();
+	void triangulate(Vector3d Ps[], Vector3d tic[], Matrix3d ric[]);
+	void removeBackShiftDepth(Eigen::Matrix3d marg_R, Eigen::Vector3d marg_P, Eigen::Matrix3d new_R, Eigen::Vector3d new_P);
+	void removeBack();
+	void removeFront(int frame_count);
+	void removeOutlier();
+	std::list<FeaturePerId> feature;
+	int last_track_num;
 
-  private:
-    double compensatedParallax2(const FeaturePerId &it_per_id, int frame_count);
-    const Matrix3d *Rs;
-    Matrix3d ric[NUM_OF_CAM];
+private:
+	double compensatedParallax2(const FeaturePerId &it_per_id, int frame_count);
+	const Matrix3d *Rs;
+	Matrix3d ric[NUM_OF_CAM];
 };
-
 #endif

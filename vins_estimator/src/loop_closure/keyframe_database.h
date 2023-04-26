@@ -21,14 +21,14 @@ public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	KeyFrameDatabase();
 	void add(KeyFrame* pKF);
-	void downsample(vector<int> &erase_index);
+	void downsample(std::vector<int> &erase_index);
 	void erase(KeyFrame* pKF);
 	int size();
 	void optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d &loop_correct_t, Eigen::Matrix3d &loop_correct_r);
 	KeyFrame* getKeyframe(int index);
 	KeyFrame* getLastKeyframe();
 	KeyFrame* getLastKeyframe(int last_index);
-	void getKeyframeIndexList(vector<int> &keyframe_index_list);
+	void getKeyframeIndexList(std::vector<int> &keyframe_index_list);
 	void updateVisualization();
 	void addLoop(int loop_index);
 	nav_msgs::Path getPath();
@@ -38,7 +38,7 @@ public:
 	//CameraPoseVisualization* getPosegraphVisualization();
 	
 private:
-	list<KeyFrame*> keyFrameList;
+	std::list<KeyFrame*> keyFrameList;
 	std::mutex mMutexkeyFrameList;
 	std::mutex mOptimiazationPosegraph;
 	std::mutex mPath;
@@ -267,8 +267,8 @@ void RotationMatrixRotatePoint(const T R[9], const T t[3], T r_t[3])
 struct FourDOFError
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-	FourDOFError(double t_x, double t_y, double t_z, double relative_yaw, double pitch_i, double roll_i)
-				  :t_x(t_x), t_y(t_y), t_z(t_z), relative_yaw(relative_yaw), pitch_i(pitch_i), roll_i(roll_i){}
+		FourDOFError(double t_x, double t_y, double t_z, double relative_yaw, double pitch_i, double roll_i)
+		:t_x(t_x), t_y(t_y), t_z(t_z), relative_yaw(relative_yaw), pitch_i(pitch_i), roll_i(roll_i) {}
 
 	template <typename T>
 	bool operator()(const T* const yaw_i, const T* ti, const T* yaw_j, const T* tj, T* residuals) const
@@ -297,25 +297,24 @@ struct FourDOFError
 	}
 
 	static ceres::CostFunction* Create(const double t_x, const double t_y, const double t_z,
-									   const double relative_yaw, const double pitch_i, const double roll_i) 
+		const double relative_yaw, const double pitch_i, const double roll_i)
 	{
-	  return (new ceres::AutoDiffCostFunction<
-	          FourDOFError, 4, 1, 3, 1, 3>(
-	          	new FourDOFError(t_x, t_y, t_z, relative_yaw, pitch_i, roll_i)));
+		return (new ceres::AutoDiffCostFunction<
+			FourDOFError, 4, 1, 3, 1, 3>(
+				new FourDOFError(t_x, t_y, t_z, relative_yaw, pitch_i, roll_i)));
 	}
 
 	double t_x, t_y, t_z;
 	double relative_yaw, pitch_i, roll_i;
-
 };
 
 struct FourDOFWeightError
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-	FourDOFWeightError(double t_x, double t_y, double t_z, double relative_yaw, double pitch_i, double roll_i)
-				  :t_x(t_x), t_y(t_y), t_z(t_z), relative_yaw(relative_yaw), pitch_i(pitch_i), roll_i(roll_i){
-				  	weight = 5;
-				  }
+		FourDOFWeightError(double t_x, double t_y, double t_z, double relative_yaw, double pitch_i, double roll_i)
+		:t_x(t_x), t_y(t_y), t_z(t_z), relative_yaw(relative_yaw), pitch_i(pitch_i), roll_i(roll_i) {
+		weight = 5;
+	}
 
 	template <typename T>
 	bool operator()(const T* const yaw_i, const T* ti, const T* yaw_j, const T* tj, T* residuals) const
@@ -344,15 +343,14 @@ struct FourDOFWeightError
 	}
 
 	static ceres::CostFunction* Create(const double t_x, const double t_y, const double t_z,
-									   const double relative_yaw, const double pitch_i, const double roll_i) 
+		const double relative_yaw, const double pitch_i, const double roll_i)
 	{
-	  return (new ceres::AutoDiffCostFunction<
-	          FourDOFWeightError, 4, 1, 3, 1, 3>(
-	          	new FourDOFWeightError(t_x, t_y, t_z, relative_yaw, pitch_i, roll_i)));
+		return (new ceres::AutoDiffCostFunction<
+			FourDOFWeightError, 4, 1, 3, 1, 3>(
+				new FourDOFWeightError(t_x, t_y, t_z, relative_yaw, pitch_i, roll_i)));
 	}
 
 	double t_x, t_y, t_z;
 	double relative_yaw, pitch_i, roll_i;
 	double weight;
-
 };

@@ -11,7 +11,6 @@
 
 namespace camodocal
 {
-
 Chessboard::Chessboard(cv::Size boardSize, cv::Mat& image)
  : mBoardSize(boardSize)
  , mCornersFound(false)
@@ -1766,218 +1765,217 @@ Chessboard::checkBoardMonotony(std::vector<ChessboardCornerPtr>& corners,
 
 bool
 Chessboard::matchCorners(ChessboardQuadPtr& quad1, int corner1,
-                         ChessboardQuadPtr& quad2, int corner2) const
+	ChessboardQuadPtr& quad2, int corner2) const
 {
-    // First Check everything from the viewpoint of the
-    // current quad compute midpoints of "parallel" quad
-    // sides 1
-    float x1 = (quad1->corners[corner1]->pt.x + quad1->corners[(corner1+1)%4]->pt.x)/2;
-    float y1 = (quad1->corners[corner1]->pt.y + quad1->corners[(corner1+1)%4]->pt.y)/2;
-    float x2 = (quad1->corners[(corner1+2)%4]->pt.x + quad1->corners[(corner1+3)%4]->pt.x)/2;
-    float y2 = (quad1->corners[(corner1+2)%4]->pt.y + quad1->corners[(corner1+3)%4]->pt.y)/2;
-    // compute midpoints of "parallel" quad sides 2
-    float x3 = (quad1->corners[corner1]->pt.x + quad1->corners[(corner1+3)%4]->pt.x)/2;
-    float y3 = (quad1->corners[corner1]->pt.y + quad1->corners[(corner1+3)%4]->pt.y)/2;
-    float x4 = (quad1->corners[(corner1+1)%4]->pt.x + quad1->corners[(corner1+2)%4]->pt.x)/2;
-    float y4 = (quad1->corners[(corner1+1)%4]->pt.y + quad1->corners[(corner1+2)%4]->pt.y)/2;
+	// First Check everything from the viewpoint of the
+	// current quad compute midpoints of "parallel" quad
+	// sides 1
+	float x1 = (quad1->corners[corner1]->pt.x + quad1->corners[(corner1 + 1) % 4]->pt.x) / 2;
+	float y1 = (quad1->corners[corner1]->pt.y + quad1->corners[(corner1 + 1) % 4]->pt.y) / 2;
+	float x2 = (quad1->corners[(corner1 + 2) % 4]->pt.x + quad1->corners[(corner1 + 3) % 4]->pt.x) / 2;
+	float y2 = (quad1->corners[(corner1 + 2) % 4]->pt.y + quad1->corners[(corner1 + 3) % 4]->pt.y) / 2;
+	// compute midpoints of "parallel" quad sides 2
+	float x3 = (quad1->corners[corner1]->pt.x + quad1->corners[(corner1 + 3) % 4]->pt.x) / 2;
+	float y3 = (quad1->corners[corner1]->pt.y + quad1->corners[(corner1 + 3) % 4]->pt.y) / 2;
+	float x4 = (quad1->corners[(corner1 + 1) % 4]->pt.x + quad1->corners[(corner1 + 2) % 4]->pt.x) / 2;
+	float y4 = (quad1->corners[(corner1 + 1) % 4]->pt.y + quad1->corners[(corner1 + 2) % 4]->pt.y) / 2;
 
-    // MARTIN: Heuristic
-    // For corner2 of quad2 to be considered,
-    // it needs to be on the same side of the two lines as
-    // corner1. This is given, if the cross product has
-    // the same sign for both computations below:
-    float a1 = x1 - x2;
-    float b1 = y1 - y2;
-    // the current corner
-    float c11 = quad1->corners[corner1]->pt.x - x2;
-    float d11 = quad1->corners[corner1]->pt.y - y2;
-    // the candidate corner
-    float c12 = quad2->corners[corner2]->pt.x - x2;
-    float d12 = quad2->corners[corner2]->pt.y - y2;
-    float sign11 = a1*d11 - c11*b1;
-    float sign12 = a1*d12 - c12*b1;
+	// MARTIN: Heuristic
+	// For corner2 of quad2 to be considered,
+	// it needs to be on the same side of the two lines as
+	// corner1. This is given, if the cross product has
+	// the same sign for both computations below:
+	float a1 = x1 - x2;
+	float b1 = y1 - y2;
+	// the current corner
+	float c11 = quad1->corners[corner1]->pt.x - x2;
+	float d11 = quad1->corners[corner1]->pt.y - y2;
+	// the candidate corner
+	float c12 = quad2->corners[corner2]->pt.x - x2;
+	float d12 = quad2->corners[corner2]->pt.y - y2;
+	float sign11 = a1 * d11 - c11 * b1;
+	float sign12 = a1 * d12 - c12 * b1;
 
-    float a2 = x3 - x4;
-    float b2 = y3 - y4;
-    // the current corner
-    float c21 = quad1->corners[corner1]->pt.x - x4;
-    float d21 = quad1->corners[corner1]->pt.y - y4;
-    // the candidate corner
-    float c22 = quad2->corners[corner2]->pt.x - x4;
-    float d22 = quad2->corners[corner2]->pt.y - y4;
-    float sign21 = a2*d21 - c21*b2;
-    float sign22 = a2*d22 - c22*b2;
+	float a2 = x3 - x4;
+	float b2 = y3 - y4;
+	// the current corner
+	float c21 = quad1->corners[corner1]->pt.x - x4;
+	float d21 = quad1->corners[corner1]->pt.y - y4;
+	// the candidate corner
+	float c22 = quad2->corners[corner2]->pt.x - x4;
+	float d22 = quad2->corners[corner2]->pt.y - y4;
+	float sign21 = a2 * d21 - c21 * b2;
+	float sign22 = a2 * d22 - c22 * b2;
 
-    // Also make shure that two border quads of the same row or
-    // column don't link. Check from the current corner's view,
-    // whether the corner diagonal from the candidate corner
-    // is also on the same side of the two lines as the current
-    // corner and the candidate corner.
-    float c13 = quad2->corners[(corner2+2)%4]->pt.x - x2;
-    float d13 = quad2->corners[(corner2+2)%4]->pt.y - y2;
-    float c23 = quad2->corners[(corner2+2)%4]->pt.x - x4;
-    float d23 = quad2->corners[(corner2+2)%4]->pt.y - y4;
-    float sign13 = a1*d13 - c13*b1;
-    float sign23 = a2*d23 - c23*b2;
-
-
-    // Second: Then check everything from the viewpoint of
-    // the candidate quad. Compute midpoints of "parallel"
-    // quad sides 1
-    float u1 = (quad2->corners[corner2]->pt.x + quad2->corners[(corner2+1)%4]->pt.x)/2;
-    float v1 = (quad2->corners[corner2]->pt.y + quad2->corners[(corner2+1)%4]->pt.y)/2;
-    float u2 = (quad2->corners[(corner2+2)%4]->pt.x + quad2->corners[(corner2+3)%4]->pt.x)/2;
-    float v2 = (quad2->corners[(corner2+2)%4]->pt.y + quad2->corners[(corner2+3)%4]->pt.y)/2;
-    // compute midpoints of "parallel" quad sides 2
-    float u3 = (quad2->corners[corner2]->pt.x + quad2->corners[(corner2+3)%4]->pt.x)/2;
-    float v3 = (quad2->corners[corner2]->pt.y + quad2->corners[(corner2+3)%4]->pt.y)/2;
-    float u4 = (quad2->corners[(corner2+1)%4]->pt.x + quad2->corners[(corner2+2)%4]->pt.x)/2;
-    float v4 = (quad2->corners[(corner2+1)%4]->pt.y + quad2->corners[(corner2+2)%4]->pt.y)/2;
-
-    // MARTIN: Heuristic
-    // For corner2 of quad2 to be considered,
-    // it needs to be on the same side of the two lines as
-    // corner1. This is given, if the cross product has
-    // the same sign for both computations below:
-    float a3 = u1 - u2;
-    float b3 = v1 - v2;
-    // the current corner
-    float c31 = quad1->corners[corner1]->pt.x - u2;
-    float d31 = quad1->corners[corner1]->pt.y - v2;
-    // the candidate corner
-    float c32 = quad2->corners[corner2]->pt.x - u2;
-    float d32 = quad2->corners[corner2]->pt.y - v2;
-    float sign31 = a3*d31-c31*b3;
-    float sign32 = a3*d32-c32*b3;
-
-    float a4 = u3 - u4;
-    float b4 = v3 - v4;
-    // the current corner
-    float c41 = quad1->corners[corner1]->pt.x - u4;
-    float d41 = quad1->corners[corner1]->pt.y - v4;
-    // the candidate corner
-    float c42 = quad2->corners[corner2]->pt.x - u4;
-    float d42 = quad2->corners[corner2]->pt.y - v4;
-    float sign41 = a4*d41-c41*b4;
-    float sign42 = a4*d42-c42*b4;
-
-    // Also make sure that two border quads of the same row or
-    // column don't link. Check from the candidate corner's view,
-    // whether the corner diagonal from the current corner
-    // is also on the same side of the two lines as the current
-    // corner and the candidate corner.
-    float c33 = quad1->corners[(corner1+2)%4]->pt.x - u2;
-    float d33 = quad1->corners[(corner1+2)%4]->pt.y - v2;
-    float c43 = quad1->corners[(corner1+2)%4]->pt.x - u4;
-    float d43 = quad1->corners[(corner1+2)%4]->pt.y - v4;
-    float sign33 = a3*d33-c33*b3;
-    float sign43 = a4*d43-c43*b4;
+	// Also make shure that two border quads of the same row or
+	// column don't link. Check from the current corner's view,
+	// whether the corner diagonal from the candidate corner
+	// is also on the same side of the two lines as the current
+	// corner and the candidate corner.
+	float c13 = quad2->corners[(corner2 + 2) % 4]->pt.x - x2;
+	float d13 = quad2->corners[(corner2 + 2) % 4]->pt.y - y2;
+	float c23 = quad2->corners[(corner2 + 2) % 4]->pt.x - x4;
+	float d23 = quad2->corners[(corner2 + 2) % 4]->pt.y - y4;
+	float sign13 = a1 * d13 - c13 * b1;
+	float sign23 = a2 * d23 - c23 * b2;
 
 
-    // This time we also need to make shure, that no quad
-    // is linked to a quad of another dilation run which
-    // may lie INSIDE it!!!
-    // Third: Therefore check everything from the viewpoint
-    // of the current quad compute midpoints of "parallel"
-    // quad sides 1
-    float x5 = quad1->corners[corner1]->pt.x;
-    float y5 = quad1->corners[corner1]->pt.y;
-    float x6 = quad1->corners[(corner1+1)%4]->pt.x;
-    float y6 = quad1->corners[(corner1+1)%4]->pt.y;
-    // compute midpoints of "parallel" quad sides 2
-    float x7 = x5;
-    float y7 = y5;
-    float x8 = quad1->corners[(corner1+3)%4]->pt.x;
-    float y8 = quad1->corners[(corner1+3)%4]->pt.y;
+	// Second: Then check everything from the viewpoint of
+	// the candidate quad. Compute midpoints of "parallel"
+	// quad sides 1
+	float u1 = (quad2->corners[corner2]->pt.x + quad2->corners[(corner2 + 1) % 4]->pt.x) / 2;
+	float v1 = (quad2->corners[corner2]->pt.y + quad2->corners[(corner2 + 1) % 4]->pt.y) / 2;
+	float u2 = (quad2->corners[(corner2 + 2) % 4]->pt.x + quad2->corners[(corner2 + 3) % 4]->pt.x) / 2;
+	float v2 = (quad2->corners[(corner2 + 2) % 4]->pt.y + quad2->corners[(corner2 + 3) % 4]->pt.y) / 2;
+	// compute midpoints of "parallel" quad sides 2
+	float u3 = (quad2->corners[corner2]->pt.x + quad2->corners[(corner2 + 3) % 4]->pt.x) / 2;
+	float v3 = (quad2->corners[corner2]->pt.y + quad2->corners[(corner2 + 3) % 4]->pt.y) / 2;
+	float u4 = (quad2->corners[(corner2 + 1) % 4]->pt.x + quad2->corners[(corner2 + 2) % 4]->pt.x) / 2;
+	float v4 = (quad2->corners[(corner2 + 1) % 4]->pt.y + quad2->corners[(corner2 + 2) % 4]->pt.y) / 2;
 
-    // MARTIN: Heuristic
-    // For corner2 of quad2 to be considered,
-    // it needs to be on the other side of the two lines than
-    // corner1. This is given, if the cross product has
-    // a different sign for both computations below:
-    float a5 = x6 - x5;
-    float b5 = y6 - y5;
-    // the current corner
-    float c51 = quad1->corners[(corner1+2)%4]->pt.x - x5;
-    float d51 = quad1->corners[(corner1+2)%4]->pt.y - y5;
-    // the candidate corner
-    float c52 = quad2->corners[corner2]->pt.x - x5;
-    float d52 = quad2->corners[corner2]->pt.y - y5;
-    float sign51 = a5*d51 - c51*b5;
-    float sign52 = a5*d52 - c52*b5;
+	// MARTIN: Heuristic
+	// For corner2 of quad2 to be considered,
+	// it needs to be on the same side of the two lines as
+	// corner1. This is given, if the cross product has
+	// the same sign for both computations below:
+	float a3 = u1 - u2;
+	float b3 = v1 - v2;
+	// the current corner
+	float c31 = quad1->corners[corner1]->pt.x - u2;
+	float d31 = quad1->corners[corner1]->pt.y - v2;
+	// the candidate corner
+	float c32 = quad2->corners[corner2]->pt.x - u2;
+	float d32 = quad2->corners[corner2]->pt.y - v2;
+	float sign31 = a3 * d31 - c31 * b3;
+	float sign32 = a3 * d32 - c32 * b3;
 
-    float a6 = x8 - x7;
-    float b6 = y8 - y7;
-    // the current corner
-    float c61 = quad1->corners[(corner1+2)%4]->pt.x - x7;
-    float d61 = quad1->corners[(corner1+2)%4]->pt.y - y7;
-    // the candidate corner
-    float c62 = quad2->corners[corner2]->pt.x - x7;
-    float d62 = quad2->corners[corner2]->pt.y - y7;
-    float sign61 = a6*d61 - c61*b6;
-    float sign62 = a6*d62 - c62*b6;
+	float a4 = u3 - u4;
+	float b4 = v3 - v4;
+	// the current corner
+	float c41 = quad1->corners[corner1]->pt.x - u4;
+	float d41 = quad1->corners[corner1]->pt.y - v4;
+	// the candidate corner
+	float c42 = quad2->corners[corner2]->pt.x - u4;
+	float d42 = quad2->corners[corner2]->pt.y - v4;
+	float sign41 = a4 * d41 - c41 * b4;
+	float sign42 = a4 * d42 - c42 * b4;
+
+	// Also make sure that two border quads of the same row or
+	// column don't link. Check from the candidate corner's view,
+	// whether the corner diagonal from the current corner
+	// is also on the same side of the two lines as the current
+	// corner and the candidate corner.
+	float c33 = quad1->corners[(corner1 + 2) % 4]->pt.x - u2;
+	float d33 = quad1->corners[(corner1 + 2) % 4]->pt.y - v2;
+	float c43 = quad1->corners[(corner1 + 2) % 4]->pt.x - u4;
+	float d43 = quad1->corners[(corner1 + 2) % 4]->pt.y - v4;
+	float sign33 = a3 * d33 - c33 * b3;
+	float sign43 = a4 * d43 - c43 * b4;
 
 
-    // Fourth: Then check everything from the viewpoint of
-    // the candidate quad compute midpoints of "parallel"
-    // quad sides 1
-    float u5 = quad2->corners[corner2]->pt.x;
-    float v5 = quad2->corners[corner2]->pt.y;
-    float u6 = quad2->corners[(corner2+1)%4]->pt.x;
-    float v6 = quad2->corners[(corner2+1)%4]->pt.y;
-    // compute midpoints of "parallel" quad sides 2
-    float u7 = u5;
-    float v7 = v5;
-    float u8 = quad2->corners[(corner2+3)%4]->pt.x;
-    float v8 = quad2->corners[(corner2+3)%4]->pt.y;
+	// This time we also need to make shure, that no quad
+	// is linked to a quad of another dilation run which
+	// may lie INSIDE it!!!
+	// Third: Therefore check everything from the viewpoint
+	// of the current quad compute midpoints of "parallel"
+	// quad sides 1
+	float x5 = quad1->corners[corner1]->pt.x;
+	float y5 = quad1->corners[corner1]->pt.y;
+	float x6 = quad1->corners[(corner1 + 1) % 4]->pt.x;
+	float y6 = quad1->corners[(corner1 + 1) % 4]->pt.y;
+	// compute midpoints of "parallel" quad sides 2
+	float x7 = x5;
+	float y7 = y5;
+	float x8 = quad1->corners[(corner1 + 3) % 4]->pt.x;
+	float y8 = quad1->corners[(corner1 + 3) % 4]->pt.y;
 
-    // MARTIN: Heuristic
-    // For corner2 of quad2 to be considered,
-    // it needs to be on the other side of the two lines than
-    // corner1. This is given, if the cross product has
-    // a different sign for both computations below:
-    float a7 = u6 - u5;
-    float b7 = v6 - v5;
-    // the current corner
-    float c71 = quad1->corners[corner1]->pt.x - u5;
-    float d71 = quad1->corners[corner1]->pt.y - v5;
-    // the candidate corner
-    float c72 = quad2->corners[(corner2+2)%4]->pt.x - u5;
-    float d72 = quad2->corners[(corner2+2)%4]->pt.y - v5;
-    float sign71 = a7*d71-c71*b7;
-    float sign72 = a7*d72-c72*b7;
+	// MARTIN: Heuristic
+	// For corner2 of quad2 to be considered,
+	// it needs to be on the other side of the two lines than
+	// corner1. This is given, if the cross product has
+	// a different sign for both computations below:
+	float a5 = x6 - x5;
+	float b5 = y6 - y5;
+	// the current corner
+	float c51 = quad1->corners[(corner1 + 2) % 4]->pt.x - x5;
+	float d51 = quad1->corners[(corner1 + 2) % 4]->pt.y - y5;
+	// the candidate corner
+	float c52 = quad2->corners[corner2]->pt.x - x5;
+	float d52 = quad2->corners[corner2]->pt.y - y5;
+	float sign51 = a5 * d51 - c51 * b5;
+	float sign52 = a5 * d52 - c52 * b5;
 
-    float a8 = u8 - u7;
-    float b8 = v8 - v7;
-    // the current corner
-    float c81 = quad1->corners[corner1]->pt.x - u7;
-    float d81 = quad1->corners[corner1]->pt.y - v7;
-    // the candidate corner
-    float c82 = quad2->corners[(corner2+2)%4]->pt.x - u7;
-    float d82 = quad2->corners[(corner2+2)%4]->pt.y - v7;
-    float sign81 = a8*d81-c81*b8;
-    float sign82 = a8*d82-c82*b8;
+	float a6 = x8 - x7;
+	float b6 = y8 - y7;
+	// the current corner
+	float c61 = quad1->corners[(corner1 + 2) % 4]->pt.x - x7;
+	float d61 = quad1->corners[(corner1 + 2) % 4]->pt.y - y7;
+	// the candidate corner
+	float c62 = quad2->corners[corner2]->pt.x - x7;
+	float d62 = quad2->corners[corner2]->pt.y - y7;
+	float sign61 = a6 * d61 - c61 * b6;
+	float sign62 = a6 * d62 - c62 * b6;
 
-    // Check whether conditions are fulfilled
-    if (((sign11 < 0 && sign12 < 0) || (sign11 > 0 && sign12 > 0))  &&
-        ((sign21 < 0 && sign22 < 0) || (sign21 > 0 && sign22 > 0))  &&
-        ((sign31 < 0 && sign32 < 0) || (sign31 > 0 && sign32 > 0))  &&
-        ((sign41 < 0 && sign42 < 0) || (sign41 > 0 && sign42 > 0))  &&
-        ((sign11 < 0 && sign13 < 0) || (sign11 > 0 && sign13 > 0))  &&
-        ((sign21 < 0 && sign23 < 0) || (sign21 > 0 && sign23 > 0))  &&
-        ((sign31 < 0 && sign33 < 0) || (sign31 > 0 && sign33 > 0))  &&
-        ((sign41 < 0 && sign43 < 0) || (sign41 > 0 && sign43 > 0))  &&
-        ((sign51 < 0 && sign52 > 0) || (sign51 > 0 && sign52 < 0))  &&
-        ((sign61 < 0 && sign62 > 0) || (sign61 > 0 && sign62 < 0))  &&
-        ((sign71 < 0 && sign72 > 0) || (sign71 > 0 && sign72 < 0))  &&
-        ((sign81 < 0 && sign82 > 0) || (sign81 > 0 && sign82 < 0)))
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+
+	// Fourth: Then check everything from the viewpoint of
+	// the candidate quad compute midpoints of "parallel"
+	// quad sides 1
+	float u5 = quad2->corners[corner2]->pt.x;
+	float v5 = quad2->corners[corner2]->pt.y;
+	float u6 = quad2->corners[(corner2 + 1) % 4]->pt.x;
+	float v6 = quad2->corners[(corner2 + 1) % 4]->pt.y;
+	// compute midpoints of "parallel" quad sides 2
+	float u7 = u5;
+	float v7 = v5;
+	float u8 = quad2->corners[(corner2 + 3) % 4]->pt.x;
+	float v8 = quad2->corners[(corner2 + 3) % 4]->pt.y;
+
+	// MARTIN: Heuristic
+	// For corner2 of quad2 to be considered,
+	// it needs to be on the other side of the two lines than
+	// corner1. This is given, if the cross product has
+	// a different sign for both computations below:
+	float a7 = u6 - u5;
+	float b7 = v6 - v5;
+	// the current corner
+	float c71 = quad1->corners[corner1]->pt.x - u5;
+	float d71 = quad1->corners[corner1]->pt.y - v5;
+	// the candidate corner
+	float c72 = quad2->corners[(corner2 + 2) % 4]->pt.x - u5;
+	float d72 = quad2->corners[(corner2 + 2) % 4]->pt.y - v5;
+	float sign71 = a7 * d71 - c71 * b7;
+	float sign72 = a7 * d72 - c72 * b7;
+
+	float a8 = u8 - u7;
+	float b8 = v8 - v7;
+	// the current corner
+	float c81 = quad1->corners[corner1]->pt.x - u7;
+	float d81 = quad1->corners[corner1]->pt.y - v7;
+	// the candidate corner
+	float c82 = quad2->corners[(corner2 + 2) % 4]->pt.x - u7;
+	float d82 = quad2->corners[(corner2 + 2) % 4]->pt.y - v7;
+	float sign81 = a8 * d81 - c81 * b8;
+	float sign82 = a8 * d82 - c82 * b8;
+
+	// Check whether conditions are fulfilled
+	if (((sign11 < 0 && sign12 < 0) || (sign11 > 0 && sign12 > 0)) &&
+		((sign21 < 0 && sign22 < 0) || (sign21 > 0 && sign22 > 0)) &&
+		((sign31 < 0 && sign32 < 0) || (sign31 > 0 && sign32 > 0)) &&
+		((sign41 < 0 && sign42 < 0) || (sign41 > 0 && sign42 > 0)) &&
+		((sign11 < 0 && sign13 < 0) || (sign11 > 0 && sign13 > 0)) &&
+		((sign21 < 0 && sign23 < 0) || (sign21 > 0 && sign23 > 0)) &&
+		((sign31 < 0 && sign33 < 0) || (sign31 > 0 && sign33 > 0)) &&
+		((sign41 < 0 && sign43 < 0) || (sign41 > 0 && sign43 > 0)) &&
+		((sign51 < 0 && sign52 > 0) || (sign51 > 0 && sign52 < 0)) &&
+		((sign61 < 0 && sign62 > 0) || (sign61 > 0 && sign62 < 0)) &&
+		((sign71 < 0 && sign72 > 0) || (sign71 > 0 && sign72 < 0)) &&
+		((sign81 < 0 && sign82 > 0) || (sign81 > 0 && sign82 < 0)))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
-
 }

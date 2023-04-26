@@ -1,7 +1,5 @@
 #include "marginalization_factor.h"
 
-using namespace std;
-
 void ResidualBlockInfo::Evaluate()
 {
     residuals.resize(cost_function->num_residuals());

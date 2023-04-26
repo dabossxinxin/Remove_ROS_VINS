@@ -6,7 +6,7 @@
 #include <map>
 #include <boost/shared_ptr.hpp>
 #include <stdint.h>
-#include "Time.h"
+#include "RosTime.h"
 
 namespace std_msgs
 {

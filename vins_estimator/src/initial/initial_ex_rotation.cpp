@@ -8,7 +8,7 @@ InitialEXRotation::InitialEXRotation(){
     ric = Matrix3d::Identity();
 }
 
-bool InitialEXRotation::CalibrationExRotation(vector<pair<Vector3d, Vector3d>> corres, Quaterniond delta_q_imu, Matrix3d &calib_ric_result)
+bool InitialEXRotation::CalibrationExRotation(std::vector<std::pair<Vector3d, Vector3d>> corres, Quaterniond delta_q_imu, Matrix3d &calib_ric_result)
 {
     frame_count++;
     Rc.push_back(solveRelativeR(corres));
@@ -65,11 +65,11 @@ bool InitialEXRotation::CalibrationExRotation(vector<pair<Vector3d, Vector3d>> c
         return false;
 }
 
-Matrix3d InitialEXRotation::solveRelativeR(const vector<pair<Vector3d, Vector3d>> &corres)
+Matrix3d InitialEXRotation::solveRelativeR(const std::vector<std::pair<Vector3d, Vector3d>> &corres)
 {
     if (corres.size() >= 9)
     {
-        vector<cv::Point2f> ll, rr;
+		std::vector<cv::Point2f> ll, rr;
         for (int i = 0; i < int(corres.size()); i++)
         {
             ll.push_back(cv::Point2f(corres[i].first(0), corres[i].first(1)));
@@ -84,8 +84,8 @@ Matrix3d InitialEXRotation::solveRelativeR(const vector<pair<Vector3d, Vector3d>
             E = -E;
             decomposeE(E, R1, R2, t1, t2);
         }
-        double ratio1 = max(testTriangulation(ll, rr, R1, t1), testTriangulation(ll, rr, R1, t2));
-        double ratio2 = max(testTriangulation(ll, rr, R2, t1), testTriangulation(ll, rr, R2, t2));
+        double ratio1 = std::max(testTriangulation(ll, rr, R1, t1), testTriangulation(ll, rr, R1, t2));
+        double ratio2 = std::max(testTriangulation(ll, rr, R2, t1), testTriangulation(ll, rr, R2, t2));
         cv::Mat_<double> ans_R_cv = ratio1 > ratio2 ? R1 : R2;
 
         Matrix3d ans_R_eigen;
@@ -97,8 +97,8 @@ Matrix3d InitialEXRotation::solveRelativeR(const vector<pair<Vector3d, Vector3d>
     return Matrix3d::Identity();
 }
 
-double InitialEXRotation::testTriangulation(const vector<cv::Point2f> &l,
-                                          const vector<cv::Point2f> &r,
+double InitialEXRotation::testTriangulation(const std::vector<cv::Point2f> &l,
+                                          const std::vector<cv::Point2f> &r,
                                           cv::Mat_<double> R, cv::Mat_<double> t)
 {
     cv::Mat pointcloud;

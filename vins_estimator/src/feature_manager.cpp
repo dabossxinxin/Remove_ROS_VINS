@@ -28,21 +28,21 @@ void FeatureManager::clearState()
 int FeatureManager::getFeatureCount()
 {
     int cnt = 0;
-    for (auto &it : feature)
-    {
+	for (auto &it : feature)
+	{
 
-        it.used_num = it.feature_per_frame.size();
+		it.used_num = it.feature_per_frame.size();
 
-        if (it.used_num >= 2 && it.start_frame < WINDOW_SIZE - 2)
-        {
-            cnt++;
-        }
-    }
+		if (it.used_num >= 2 && it.start_frame < WINDOW_SIZE - 2)
+		{
+			cnt++;
+		}
+	}
     return cnt;
 }
 
 
-bool FeatureManager::addFeatureCheckParallax(int frame_count, const map<int, vector<pair<int, Vector3d>>> &image)
+bool FeatureManager::addFeatureCheckParallax(int frame_count, const std::map<int, std::vector<std::pair<int, Vector3d>>> &image)
 {
   //  ROS_DEBUG("input feature: %d", (int)image.size());
   //  ROS_DEBUG("num of feature: %d", getFeatureCount());
@@ -121,9 +121,9 @@ void FeatureManager::debugShow()
     }
 }
 
-vector<pair<Vector3d, Vector3d>> FeatureManager::getCorresponding(int frame_count_l, int frame_count_r)
+std::vector<std::pair<Vector3d, Vector3d>> FeatureManager::getCorresponding(int frame_count_l, int frame_count_r)
 {
-    vector<pair<Vector3d, Vector3d>> corres;
+	std::vector<std::pair<Vector3d, Vector3d>> corres;
     for (auto &it : feature)
     {
         if (it.start_frame <= frame_count_l && it.endFrame() >= frame_count_r)
@@ -136,7 +136,7 @@ vector<pair<Vector3d, Vector3d>> FeatureManager::getCorresponding(int frame_coun
 
             b = it.feature_per_frame[idx_r].point;
             
-            corres.push_back(make_pair(a, b));
+            corres.push_back(std::make_pair(a, b));
         }
     }
     return corres;
@@ -386,7 +386,7 @@ double FeatureManager::compensatedParallax2(const FeaturePerId &it_per_id, int f
     double v_i_comp = p_i_comp(1) / dep_i_comp;
     double du_comp = u_i_comp - u_j, dv_comp = v_i_comp - v_j;
 
-    ans = max(ans, sqrt(min(du * du + dv * dv, du_comp * du_comp + dv_comp * dv_comp)));
+    ans = std::max(ans, sqrt(std::min(du * du + dv * dv, du_comp * du_comp + dv_comp * dv_comp)));
 
     return ans;
 }
