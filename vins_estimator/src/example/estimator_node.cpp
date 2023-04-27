@@ -46,12 +46,12 @@ LoopClosure *loop_closure;
 
 std::condition_variable con;
 double current_time = -1;
-queue<sensor_msgs::ImuConstPtr> imu_buf;
-queue<sensor_msgs::PointCloudConstPtr> feature_buf;
+std::queue<sensor_msgs::ImuConstPtr> imu_buf;
+std::queue<sensor_msgs::PointCloudConstPtr> feature_buf;
 std::mutex m_posegraph_buf;
-queue<int> optimize_posegraph_buf;
-queue<KeyFrame*> keyframe_buf;
-queue<RetriveData> retrive_data_buf;
+std::queue<int> optimize_posegraph_buf;
+std::queue<KeyFrame*> keyframe_buf;
+std::queue<RetriveData> retrive_data_buf;
 
 // 闭环检测相关成员变量
 int sum_of_wait = 0;
@@ -73,7 +73,7 @@ Eigen::Vector3d tmp_Bg;
 Eigen::Vector3d acc_0;
 Eigen::Vector3d gyr_0;
 
-queue<std::pair<cv::Mat, double>> image_buf;
+std::queue<std::pair<cv::Mat, double>> image_buf;
 KeyFrameDatabase keyframe_database;
 
 int global_frame_cnt = 0;
@@ -255,7 +255,7 @@ void update()
     acc_0 = estimator.acc_0;
     gyr_0 = estimator.gyr_0;
 
-    queue<sensor_msgs::ImuConstPtr> tmp_imu_buf = imu_buf;
+	std::queue<sensor_msgs::ImuConstPtr> tmp_imu_buf = imu_buf;
 	for (sensor_msgs::ImuConstPtr tmp_imu_msg; !tmp_imu_buf.empty(); tmp_imu_buf.pop())
 		predict(tmp_imu_buf.front());
 }
@@ -341,7 +341,7 @@ void send_imu(const sensor_msgs::ImuConstPtr &imu_msg)
     double rz = imu_msg->angular_velocity.z - bg[2];
     //ROS_DEBUG("IMU %f, dt: %f, acc: %f %f %f, gyr: %f %f %f", t, dt, dx, dy, dz, rx, ry, rz);
 
-    estimator.processIMU(dt, Vector3d(dx, dy, dz), Vector3d(rx, ry, rz));
+    estimator.processIMU(dt, Eigen::Vector3d(dx, dy, dz), Eigen::Vector3d(rx, ry, rz));
 }
 
 // 闭环检测线程主函数
@@ -382,8 +382,8 @@ void process_loop_detection()
 
 			bool loop_succ = false;
 			int old_index = -1;
-			vector<cv::Point2f> cur_pts;
-			vector<cv::Point2f> old_pts;
+			std::vector<cv::Point2f> cur_pts;
+			std::vector<cv::Point2f> old_pts;
 			TicToc t_brief;
 			cur_kf->extractBrief(current_image);
 			//printf("loop extract %d feature using %lf\n", cur_kf->keypoints.size(), t_brief.toc());
@@ -398,7 +398,7 @@ void process_loop_detection()
 				if (old_kf == NULL)
 				{
 					// ROS_WARN("NO such frame in keyframe_database");
-					cout << "WARN: NO such frame in keyframe_database" << endl;
+					std::cout << "WARN: NO such frame in keyframe_database" << std::endl;
 					// ROS_BREAK();
 					//break;
 					continue;
@@ -407,8 +407,8 @@ void process_loop_detection()
 				//cout << "loop succ " <<global_frame_cnt <<  " with " << old_index << "rd image" << endl;
 				assert(old_index != -1);
 
-				Vector3d T_w_i_old, PnP_T_old;
-				Matrix3d R_w_i_old, PnP_R_old;
+				Eigen::Vector3d T_w_i_old, PnP_T_old;
+				Eigen::Matrix3d R_w_i_old, PnP_R_old;
 
 				old_kf->getPose(T_w_i_old, R_w_i_old);
 				std::vector<cv::Point2f> measurements_old;
@@ -423,7 +423,7 @@ void process_loop_detection()
 				if ((int)measurements_old_norm.size() > MIN_LOOP_NUM && global_frame_cnt - old_index > 35 && old_index > 30)
 				{
 
-					Quaterniond PnP_Q_old(PnP_R_old);
+					Eigen::Quaterniond PnP_Q_old(PnP_R_old);
 					RetriveData retrive_data;
 					retrive_data.cur_index = cur_kf->global_index;
 					retrive_data.header = cur_kf->header;
@@ -505,7 +505,7 @@ void process_loop_detection()
 						cv::line(loop_match_img2, measurements_old[i], cur_pt, cv::Scalar(0, 255, 0), 1, 8, 0);
 					}
 
-					ostringstream convert2;
+					std::ostringstream convert2;
 					convert2 << "/home/tony-ws/raw_data/loop_image/"
 						<< cur_kf->global_index << "-"
 						<< old_index << "-" << loop_fusion << "-2.jpg";
@@ -547,8 +547,8 @@ void process_pose_graph()
         m_posegraph_buf.unlock();
 		if (index != -1)
 		{
-			Vector3d correct_t = Vector3d::Zero();
-			Matrix3d correct_r = Matrix3d::Identity();
+			Eigen::Vector3d correct_t = Eigen::Vector3d::Zero();
+			Eigen::Matrix3d correct_r = Eigen::Matrix3d::Identity();
 			TicToc t_posegraph;
 			keyframe_database.optimize4DoFLoopPoseGraph(index,
 				correct_t,
@@ -596,7 +596,7 @@ void process()
 			//cout << "processing vision data with stamp "<<  img_msg->header.stamp.toSec() << endl;
 
 			TicToc t_s;
-			map<int, vector<pair<int, Vector3d>>> image;
+			std::map<int, std::vector<std::pair<int, Eigen::Vector3d>>> image;
 			for (unsigned int i = 0; i < img_msg->points.size(); i++)
 			{
 				int v = img_msg->channels[0].values[i] + 0.5;
@@ -607,7 +607,7 @@ void process()
 				double z = img_msg->points[i].z;
 				//ROS_ASSERT(z == 1);
 				assert(z == 1);
-				image[feature_id].emplace_back(camera_id, Vector3d(x, y, z));
+				image[feature_id].emplace_back(camera_id, Eigen::Vector3d(x, y, z));
 			}
 			estimator.processImage(image, img_msg->header);
 
@@ -615,7 +615,7 @@ void process()
 			if (LOOP_CLOSURE)
 			{
 				// remove previous loop
-				vector<RetriveData>::iterator it = estimator.retrive_data_vector.begin();
+				std::vector<RetriveData>::iterator it = estimator.retrive_data_vector.begin();
 				for (; it != estimator.retrive_data_vector.end(); )
 				{
 					if ((*it).header < estimator.Headers[0].stamp.toSec())
@@ -636,8 +636,8 @@ void process()
 				//WINDOW_SIZE - 2 is key frame
 				if (estimator.marginalization_flag == 0 && estimator.solver_flag == estimator.NON_LINEAR)
 				{
-					Vector3d vio_T_w_i = estimator.Ps[WINDOW_SIZE - 2];
-					Matrix3d vio_R_w_i = estimator.Rs[WINDOW_SIZE - 2];
+					Eigen::Vector3d vio_T_w_i = estimator.Ps[WINDOW_SIZE - 2];
+					Eigen::Matrix3d vio_R_w_i = estimator.Rs[WINDOW_SIZE - 2];
 					i_buf.lock();
 					while (!image_buf.empty() && image_buf.front().second < estimator.Headers[WINDOW_SIZE - 2].stamp.toSec())
 					{
@@ -650,8 +650,8 @@ void process()
 					KeyFrame_image = image_buf.front().first;
 
 					const char *pattern_file = PATTERN_FILE.c_str();
-					Vector3d cur_T;
-					Matrix3d cur_R;
+					Eigen::Vector3d cur_T;
+					Eigen::Matrix3d cur_R;
 					cur_T = relocalize_r * vio_T_w_i + relocalize_t;
 					cur_R = relocalize_r * vio_R_w_i;
 					KeyFrame* keyframe = new KeyFrame(estimator.Headers[WINDOW_SIZE - 2].stamp.toSec(), vio_T_w_i, vio_R_w_i, cur_T, cur_R, image_buf.front().first, pattern_file, relocalize_t, relocalize_r);
@@ -722,7 +722,7 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 	if (LOOP_CLOSURE)
 	{
 		i_buf.lock();
-		image_buf.push(make_pair(show_img, timestamp.toSec()));
+		image_buf.push(std::make_pair(show_img, timestamp.toSec()));
 		i_buf.unlock();
 	}
 	if (first_image_flag)
@@ -776,8 +776,8 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 		TicToc t_o;
 		cv::calcOpticalFlowPyrLK(trackerData[0].cur_img, trackerData[1].cur_img, trackerData[0].cur_pts, trackerData[1].cur_pts, r_status, r_err, cv::Size(21, 21), 3);
 		//     ROS_DEBUG("spatial optical flow costs: %fms", t_o.toc());
-		vector<cv::Point2f> ll, rr;
-		vector<int> idx;
+		std::vector<cv::Point2f> ll, rr;
+		std::vector<int> idx;
 		for (unsigned int i = 0; i < r_status.size(); i++)
 		{
 			if (!inBorder(trackerData[1].cur_pts[i]))
@@ -837,7 +837,7 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 		feature_points->header.stamp = timestamp; //here need to double check,because of missing seq variable assignment
 		feature_points->header.frame_id = "world";
 
-		std::vector<set<int>> hash_ids(NUM_OF_CAM);
+		std::vector<std::set<int>> hash_ids(NUM_OF_CAM);
 		for (int i = 0; i < NUM_OF_CAM; i++)
 		{
 			if (i != 1 || !STEREO_TRACK)
@@ -977,7 +977,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	ifstream fImus;
+	std::ifstream fImus;
 	fImus.open(argv[4]);
 
 	cv::Mat image;
@@ -989,9 +989,9 @@ int main(int argc, char **argv)
 	for (int i = 0; i < NUM_OF_CAM; i++)
 		trackerData[i].readIntrinsicParameter(CAM_NAMES[i]);
 
-	std::vector<string> vStrImagesFileNames;
+	std::vector<std::string> vStrImagesFileNames;
 	std::vector<double> vTimeStamps;
-	LoadImages(string(argv[2]), string(argv[3]), vStrImagesFileNames, vTimeStamps);
+	LoadImages(std::string(argv[2]), std::string(argv[3]), vStrImagesFileNames, vTimeStamps);
 
 	int imageNum = vStrImagesFileNames.size();
 	if (imageNum <= 0){

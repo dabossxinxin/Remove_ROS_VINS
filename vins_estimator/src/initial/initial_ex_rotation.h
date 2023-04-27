@@ -2,21 +2,19 @@
 
 #include <vector>
 #include "../parameters.h"
-
 #include <opencv2/opencv.hpp>
 #include <Eigen/Dense>
 
-using namespace Eigen;
-
-/* This class help you to calibrate extrinsic rotation between imu and camera when your totally don't konw the extrinsic parameter */
+/* This class help you to calibrate extrinsic rotation between 
+imu and camera when your totally don't konw the extrinsic parameter */
 class InitialEXRotation
 {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	InitialEXRotation();
-    bool CalibrationExRotation(std::vector<std::pair<Vector3d, Vector3d>> corres, Quaterniond delta_q_imu, Matrix3d &calib_ric_result);
+    bool CalibrationExRotation(std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> corres, Eigen::Quaterniond delta_q_imu, Eigen::Matrix3d &calib_ric_result);
 private:
-	Matrix3d solveRelativeR(const std::vector<std::pair<Vector3d, Vector3d>> &corres);
+	Eigen::Matrix3d solveRelativeR(const std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> &corres);
 
     double testTriangulation(const std::vector<cv::Point2f> &l,
                              const std::vector<cv::Point2f> &r,
@@ -26,10 +24,10 @@ private:
                     cv::Mat_<double> &t1, cv::Mat_<double> &t2);
     int frame_count;
 
-	std::vector< Matrix3d > Rc;
-	std::vector< Matrix3d > Rimu;
-	std::vector< Matrix3d > Rc_g;
-    Matrix3d ric;
+	std::vector<Eigen::Matrix3d> Rc;
+	std::vector<Eigen::Matrix3d> Rimu;
+	std::vector<Eigen::Matrix3d> Rc_g;
+	Eigen::Matrix3d ric;
 };
 
 

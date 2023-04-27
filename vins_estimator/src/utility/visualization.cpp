@@ -1,7 +1,5 @@
 #include "visualization.h"
 
-using namespace ros;
-using namespace Eigen;
 #if 0
 ros::Publisher pub_odometry, pub_latest_odometry;
 ros::Publisher pub_path, pub_loop_path;
@@ -294,9 +292,9 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header, Eig
         path.poses.push_back(pose_stamped);
         pub_path.publish(path);*/
 
-        Vector3d correct_t;
-        Vector3d correct_v;
-        Quaterniond correct_q;
+		Eigen::Vector3d correct_t;
+		Eigen::Vector3d correct_v;
+		Eigen::Quaterniond correct_q;
         correct_t = loop_correct_r * estimator.Ps[WINDOW_SIZE] + loop_correct_t;
         correct_q = loop_correct_r * estimator.Rs[WINDOW_SIZE];
         correct_v = loop_correct_r * estimator.Vs[WINDOW_SIZE];

@@ -1,7 +1,6 @@
 #ifndef __KEY_FRAME_
 #define __KEY_FRAME_
 
-//#include <ros/ros.h>
 #include <Eigen/Dense>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/opencv.hpp>
@@ -15,8 +14,6 @@
 #include "camodocal/camera_models/PinholeCamera.h"
 #include <mutex>
 #include "loop_closure.h"
-
-using namespace Eigen;
 
 // This functor extracts BRIEF descriptors in the required format
 class BriefExtractor : public FeatureExtractor<FBrief::TDescriptor>
@@ -78,9 +75,9 @@ public:
 
 	void addConnection(int index, KeyFrame* connected_kf);
 
-	void addConnection(int index, KeyFrame* connected_kf, Vector3d relative_t, Quaterniond relative_q, double relative_yaw);
+	void addConnection(int index, KeyFrame* connected_kf, Eigen::Vector3d relative_t, Eigen::Quaterniond relative_q, double relative_yaw);
 
-	void updateLoopConnection(Vector3d relative_t, Quaterniond relative_q, double relative_yaw);
+	void updateLoopConnection(Eigen::Vector3d relative_t, Eigen::Quaterniond relative_q, double relative_yaw);
 
 	void detectLoop(int index);
 
@@ -93,7 +90,6 @@ public:
 
 	double getLoopRelativeYaw();
 
-	// data 
 	double header;
 	std::vector<Eigen::Vector3d> point_clouds, point_clouds_matched;
 	//feature in origin image plane
@@ -113,8 +109,8 @@ public:
 
 	int global_index;
 	cv::Mat image;
-	Matrix3d qic;
-	Vector3d tic;
+	Eigen::Matrix3d qic;
+	Eigen::Vector3d tic;
 	int COL, ROW;
 	bool use_retrive;
 
@@ -129,7 +125,6 @@ public:
 	int resample_index;
 	const char *BRIEF_PATTERN_FILE;
 	// index t_x t_y t_z q_w q_x q_y q_z yaw
-
 
 private:
 	Eigen::Vector3d T_w_i;

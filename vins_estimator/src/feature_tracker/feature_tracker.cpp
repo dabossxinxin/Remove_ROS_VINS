@@ -14,7 +14,7 @@ bool inBorder(const cv::Point2f &pt)
 		img_y < ROW - BORDER_SIZE;
 }
 
-void reduceVector(vector<cv::Point2f> &v, vector<uchar> status)
+void reduceVector(std::vector<cv::Point2f> &v, std::vector<uchar> status)
 {
     int j = 0;
     for (int i = 0; i < int(v.size()); i++)
@@ -23,7 +23,7 @@ void reduceVector(vector<cv::Point2f> &v, vector<uchar> status)
     v.resize(j);
 }
 
-void reduceVector(vector<int> &v, vector<uchar> status)
+void reduceVector(std::vector<int> &v, std::vector<uchar> status)
 {
     int j = 0;
     for (int i = 0; i < int(v.size()); i++)
@@ -44,12 +44,12 @@ void FeatureTracker::setMask()
 		mask = cv::Mat(ROW, COL, CV_8UC1, cv::Scalar(255));
     
     // prefer to keep features that are tracked for long time
-	vector<pair<int, pair<cv::Point2f, int>>> cnt_pts_id;
+	std::vector<std::pair<int, std::pair<cv::Point2f, int>>> cnt_pts_id;
 
     for (unsigned int i = 0; i < forw_pts.size(); i++)
-        cnt_pts_id.push_back(make_pair(track_cnt[i], make_pair(forw_pts[i], ids[i])));
+        cnt_pts_id.push_back(std::make_pair(track_cnt[i], std::make_pair(forw_pts[i], ids[i])));
 
-    sort(cnt_pts_id.begin(), cnt_pts_id.end(), [](const pair<int, pair<cv::Point2f, int>> &a, const pair<int, pair<cv::Point2f, int>> &b)
+    sort(cnt_pts_id.begin(), cnt_pts_id.end(), [](const std::pair<int, std::pair<cv::Point2f, int>> &a, const std::pair<int, std::pair<cv::Point2f, int>> &b)
          {
             return a.first > b.first;
          });
@@ -109,8 +109,8 @@ void FeatureTracker::readImage(const cv::Mat &_img)
     if (cur_pts.size() > 0)
     {
         TicToc t_o;
-        vector<uchar> status;
-        vector<float> err;
+		std::vector<uchar> status;
+		std::vector<float> err;
         cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 3);
 
         for (int i = 0; i < int(forw_pts.size()); i++)
@@ -142,11 +142,11 @@ void FeatureTracker::readImage(const cv::Mat &_img)
         if (n_max_cnt > 0)
         {
             if(mask.empty())
-                cout << "mask is empty " << endl;
+				std::cout << "mask is empty " << std::endl;
             if (mask.type() != CV_8UC1)
-                cout << "mask type wrong " << endl;
+				std::cout << "mask type wrong " << std::endl;
             if (mask.size() != forw_img.size())
-                cout << "wrong size " << endl;
+				std::cout << "wrong size " << std::endl;
             cv::goodFeaturesToTrack(forw_img, n_pts, MAX_CNT - forw_pts.size(), 0.1, MIN_DIST, mask);
         }
         else
@@ -171,7 +171,7 @@ void FeatureTracker::rejectWithF()
     {
        // ROS_DEBUG("FM ransac begins");
         TicToc t_f;
-        vector<cv::Point2f> un_prev_pts(prev_pts.size()), un_forw_pts(forw_pts.size());
+		std::vector<cv::Point2f> un_prev_pts(prev_pts.size()), un_forw_pts(forw_pts.size());
         for (unsigned int i = 0; i < prev_pts.size(); i++)
         {
             Eigen::Vector3d tmp_p;
@@ -186,7 +186,7 @@ void FeatureTracker::rejectWithF()
 			un_forw_pts[i] = cv::Point2f(tmp_p.x(), tmp_p.y());
         }
 
-        vector<uchar> status;
+		std::vector<uchar> status;
         cv::findFundamentalMat(un_prev_pts, un_forw_pts, cv::FM_RANSAC, F_THRESHOLD, 0.99, status);
         int size_a = prev_pts.size();
         reduceVector(prev_pts, status);
@@ -211,16 +211,16 @@ bool FeatureTracker::updateID(unsigned int i)
         return false;
 }
 
-void FeatureTracker::readIntrinsicParameter(const string &calib_file)
+void FeatureTracker::readIntrinsicParameter(const std::string &calib_file)
 {
 	console::print_highlight("Read camera parameters: %s\n", calib_file.c_str());
 	m_camera = CameraFactory::instance()->generateCameraFromYamlFile(calib_file);
 }
 
-void FeatureTracker::showUndistortion(const string &name)
+void FeatureTracker::showUndistortion(const std::string &name)
 {
     cv::Mat undistortedImg(ROW + 600, COL + 600, CV_8UC1, cv::Scalar(0));
-    vector<Eigen::Vector2d> distortedp, undistortedp;
+	std::vector<Eigen::Vector2d> distortedp, undistortedp;
     for (int i = 0; i < COL; i++)
         for (int j = 0; j < ROW; j++)
         {
@@ -253,9 +253,9 @@ void FeatureTracker::showUndistortion(const string &name)
     cv::waitKey(0);
 }
 
-vector<cv::Point2f> FeatureTracker::undistortedPoints()
+std::vector<cv::Point2f> FeatureTracker::undistortedPoints()
 {
-    vector<cv::Point2f> un_pts;
+	std::vector<cv::Point2f> un_pts;
     //cv::undistortPoints(cur_pts, un_pts, K, cv::Mat());
     for (unsigned int i = 0; i < cur_pts.size(); i++)
     {

@@ -67,14 +67,14 @@ void KeyFrame::buildKeyFrameFeatures(Estimator &estimator, const camodocal::Came
 		if (it_per_id.start_frame <= WINDOW_SIZE - 2 && it_per_id.start_frame + frame_size - 1 >= WINDOW_SIZE - 2)
 		{
 			//features current measurements
-			Vector3d point = it_per_id.feature_per_frame[WINDOW_SIZE - 2 - it_per_id.start_frame].point;
-			Vector2d point_uv;
+			Eigen::Vector3d point = it_per_id.feature_per_frame[WINDOW_SIZE - 2 - it_per_id.start_frame].point;
+			Eigen::Vector2d point_uv;
 			m_camera->spaceToPlane(point, point_uv);
 			measurements.push_back(cv::Point2f(point_uv.x(), point_uv.y()));
 			pts_normalize.push_back(cv::Point2f(point.x() / point.z(), point.y() / point.z()));
 			features_id.push_back(it_per_id.feature_id);
 			//features 3D pos from first measurement and inverse depth
-			Vector3d pts_i = it_per_id.feature_per_frame[0].point * it_per_id.estimated_depth;
+			Eigen::Vector3d pts_i = it_per_id.feature_per_frame[0].point * it_per_id.estimated_depth;
 			point_clouds.push_back(estimator.Rs[it_per_id.start_frame] * (qic * pts_i + tic) + estimator.Ps[it_per_id.start_frame]);
 		}
 	}
@@ -188,10 +188,10 @@ void KeyFrame::PnPRANSAC(std::vector<cv::Point2f> &measurements_old,
 {
 	cv::Mat r, rvec, t, D, tmp_r;
 	cv::Mat K = (cv::Mat_<double>(3, 3) << 1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0);
-	Matrix3d R_inital;
-	Vector3d P_inital;
-	Matrix3d R_w_c = vio_R_w_i * qic;
-	Vector3d T_w_c = vio_T_w_i + vio_R_w_i * tic;
+	Eigen::Matrix3d R_inital;
+	Eigen::Vector3d P_inital;
+	Eigen::Matrix3d R_w_c = vio_R_w_i * qic;
+	Eigen::Vector3d T_w_c = vio_T_w_i + vio_R_w_i * tic;
 
 	R_inital = R_w_c.inverse();
 	P_inital = -(R_inital * T_w_c);
@@ -229,10 +229,10 @@ void KeyFrame::PnPRANSAC(std::vector<cv::Point2f> &measurements_old,
 	}
 
 	cv::Rodrigues(rvec, r);
-	Matrix3d R_pnp, R_w_c_old;
+	Eigen::Matrix3d R_pnp, R_w_c_old;
 	cv::cv2eigen(r, R_pnp);
 	R_w_c_old = R_pnp.transpose();
-	Vector3d T_pnp, T_w_c_old;
+	Eigen::Vector3d T_pnp, T_w_c_old;
 	cv::cv2eigen(t, T_pnp);
 	T_w_c_old = R_w_c_old * (-T_pnp);
 
@@ -290,7 +290,7 @@ void KeyFrame::getOriginPose(Eigen::Vector3d &_T_w_i, Eigen::Matrix3d &_R_w_i)
 	_R_w_i = vio_R_w_i;
 }
 
-void KeyFrame::updateLoopConnection(Vector3d relative_t, Quaterniond relative_q, double relative_yaw)
+void KeyFrame::updateLoopConnection(Eigen::Vector3d relative_t, Eigen::Quaterniond relative_q, double relative_yaw)
 {
 	has_loop = 1;
 	update_loop_info = 1;

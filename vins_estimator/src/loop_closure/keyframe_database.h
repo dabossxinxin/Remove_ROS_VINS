@@ -44,11 +44,11 @@ private:
 	std::mutex mPath;
 	std::mutex mPosegraphVisualization;
 	int earliest_loop_index;
-	Vector3d t_drift;
+	Eigen::Vector3d t_drift;
 	double yaw_drift;
-	Matrix3d r_drift;
+	Eigen::Matrix3d r_drift;
 	double total_length;
-	Vector3d last_P;
+	Eigen::Vector3d last_P;
 	nav_msgs::Path refine_path;
 	//CameraPoseVisualization* posegraph_visualization;
 };
