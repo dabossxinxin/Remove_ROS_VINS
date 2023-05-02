@@ -42,17 +42,16 @@ void FeatureTracker::setMask()
 		mask = fisheye_mask.clone();
 	else
 		mask = cv::Mat(ROW, COL, CV_8UC1, cv::Scalar(255));
-    
-    // prefer to keep features that are tracked for long time
-	std::vector<std::pair<int, std::pair<cv::Point2f, int>>> cnt_pts_id;
 
+	std::vector<std::pair<int, std::pair<cv::Point2f, int>>> cnt_pts_id;
     for (unsigned int i = 0; i < forw_pts.size(); i++)
         cnt_pts_id.push_back(std::make_pair(track_cnt[i], std::make_pair(forw_pts[i], ids[i])));
 
-    sort(cnt_pts_id.begin(), cnt_pts_id.end(), [](const std::pair<int, std::pair<cv::Point2f, int>> &a, const std::pair<int, std::pair<cv::Point2f, int>> &b)
-         {
+    sort(cnt_pts_id.begin(), cnt_pts_id.end(),
+         [](const std::pair<int, std::pair<cv::Point2f, int>> &a,
+                 const std::pair<int, std::pair<cv::Point2f, int>> &b) {
             return a.first > b.first;
-         });
+    });
 
     forw_pts.clear();
     ids.clear();
@@ -121,7 +120,7 @@ void FeatureTracker::readImage(const cv::Mat &_img)
         reduceVector(forw_pts, status);
         reduceVector(ids, status);
         reduceVector(track_cnt, status);
-      //  ROS_DEBUG("temporal optical flow costs: %fms", t_o.toc());
+        console::print_info("INFO: feature_track optical flow costs: %fms.\n",t_o.toc());
     }
 
     if (PUB_THIS_FRAME)
@@ -131,32 +130,28 @@ void FeatureTracker::readImage(const cv::Mat &_img)
         for (auto &n : track_cnt)
             n++;
 
-     //   ROS_DEBUG("set mask begins");
         TicToc t_m;
         setMask();
-     //   ROS_DEBUG("set mask costs %fms", t_m.toc());
+        console::print_info("INFO: feature_track set mask costs %fms.\n", t_m.toc());
 
-     //   ROS_DEBUG("detect feature begins");
         TicToc t_t;
         int n_max_cnt = MAX_CNT - static_cast<int>(forw_pts.size());
         if (n_max_cnt > 0)
         {
             if(mask.empty())
-				std::cout << "mask is empty " << std::endl;
+                console::print_error("ERROR: feature_track mask is empty.\n");
             if (mask.type() != CV_8UC1)
-				std::cout << "mask type wrong " << std::endl;
+                console::print_error("ERROR: feature_track mask type wrong.\n");
             if (mask.size() != forw_img.size())
-				std::cout << "wrong size " << std::endl;
+                console::print_error("ERROR: feature_track mask wrong size.\n");
             cv::goodFeaturesToTrack(forw_img, n_pts, MAX_CNT - forw_pts.size(), 0.1, MIN_DIST, mask);
         }
-        else
+        else {
             n_pts.clear();
-     //   ROS_DEBUG("detect feature costs: %fms", t_t.toc());
+        }
+        console::print_info("INFO: feature_track goodFeaturesToTrack costs %fms.\n",t_t.toc());
 
-      //  ROS_DEBUG("add feature begins");
-        TicToc t_a;
         addPoints();
-     //   ROS_DEBUG("selectFeature costs: %fms", t_a.toc());
 
         prev_img = forw_img;
         prev_pts = forw_pts;

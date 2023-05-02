@@ -169,6 +169,9 @@ target_link_libraries(vins_estimator
 add_executable(example ./src/example/estimator_node.cpp)
 target_link_libraries(example vins_estimator)
 
+add_executable(example_vis ./src/example/estimator_visualization.cpp)
+Target_link_libraries(example_vis vins_estimator)
+
 
 
 

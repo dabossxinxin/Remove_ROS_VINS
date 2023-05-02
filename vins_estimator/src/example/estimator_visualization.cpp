@@ -260,11 +260,10 @@ void update()
 		predict(tmp_imu_buf.front());
 }
 
-std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>,
-        sensor_msgs::PointCloudConstPtr>> getMeasurements()
+std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>, sensor_msgs::PointCloudConstPtr>>
+getMeasurements()
 {
-    std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>,
-            sensor_msgs::PointCloudConstPtr>> measurements;
+    std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>, sensor_msgs::PointCloudConstPtr>> measurements;
 
     while (true)
     {
@@ -588,12 +587,11 @@ void process()
 
 		for (auto &measurement : measurements)
 		{
-            // 预积分
 			for (auto &imu_msg : measurement.first)
 				send_imu(imu_msg);
 
 			auto img_msg = measurement.second;
-            console::print_highlight("Process vision data with stamp %f.\n", img_msg->header.stamp.toSec());
+            console::print_highlight("Process vision data with stamp %f.\n",img_msg->header.stamp.toSec());
 
 			TicToc t_s;
 			std::map<int, std::vector<std::pair<int, Eigen::Vector3d>>> image;
@@ -686,9 +684,7 @@ void process()
 				}
 			}
 
-			//double whole_t = t_s.toc();
-			//printStatistics(estimator, whole_t);
-			console::print_highlight("Current position:");
+			console::print_highlight("Current position: ");
 			console::print_matrix(estimator.Ps[WINDOW_SIZE].data(), 1, 3);
 
 			std_msgs::Header header = img_msg->header;
@@ -708,8 +704,6 @@ void process()
 			m_loop_drift.unlock();
 			//ROS_ERROR("end: %f, at %f", img_msg->header.stamp.toSec(), ros::Time::now().toSec());
 		}
-
-        // 滑窗中最后一帧的姿态加上IMU的积分量为最新状态
         m_buf.lock();
         m_state.lock();
         if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
@@ -770,7 +764,6 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 #endif
 	}
 
-    // vins系统视觉系统为双目时才会进入的代码分支
 	if (PUB_THIS_FRAME && STEREO_TRACK && trackerData[0].cur_pts.size() > 0)
 	{
 		pub_count++;
@@ -891,16 +884,16 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 		feature_callback(feature_points);          //add
 
 		// 可视化显示图像特征点
-		cv::Mat tmp_img = show_img.rowRange(0, ROW);
-		cv::cvtColor(show_img, tmp_img, cv::COLOR_GRAY2RGB);
-		for (unsigned int j = 0; j < trackerData[0].cur_pts.size(); j++)
-		{
-			double len = std::min(1.0, 1.0 * trackerData[0].track_cnt[j] / WINDOW_SIZE_FEATURE_TRACKER);
-			cv::circle(tmp_img, trackerData[0].cur_pts[j], 2, cv::Scalar(255 * (1 - len), 0, 255 * len), 2);
-		}
-		cv::namedWindow("feature_track", cv::WINDOW_AUTOSIZE);
-		cv::imshow("feature_track", tmp_img);
-		cv::waitKey(5);
+		//cv::Mat tmp_img = show_img.rowRange(0, ROW);
+		//cv::cvtColor(show_img, tmp_img, cv::COLOR_GRAY2RGB);
+		//for (unsigned int j = 0; j < trackerData[0].cur_pts.size(); j++)
+		//{
+		//	double len = std::min(1.0, 1.0 * trackerData[0].track_cnt[j] / WINDOW_SIZE_FEATURE_TRACKER);
+		//	cv::circle(tmp_img, trackerData[0].cur_pts[j], 2, cv::Scalar(255 * (1 - len), 0, 255 * len), 2);
+		//}
+		//cv::namedWindow("vins", cv::WINDOW_NORMAL);
+		//cv::imshow("vins", tmp_img);
+		//cv::waitKey(5);
 	}
 }
 
@@ -1009,65 +1002,70 @@ int main(int argc, char **argv)
 	std::thread measurement_process{ process };
 	measurement_process.detach();
 
-	std::thread loop_detection, pose_graph;
-	if (LOOP_CLOSURE)
-	{
-		loop_detection = std::thread(process_loop_detection);
-		pose_graph = std::thread(process_pose_graph);
-		std::thread visualization_thread{ visualization };
-		loop_detection.detach();
-		pose_graph.detach();
-		visualization_thread.detach();
-		//loop_detection.join();
-		//pose_graph.join();
-		//m_camera = CameraFactory::instance()->generateCameraFromYamlFile(CAM_NAMES_ESTIMATOR);
-	}
+	//std::thread loop_detection, pose_graph;
+	//if (LOOP_CLOSURE)
+	//{
+	//	loop_detection = std::thread(process_loop_detection);
+	//	pose_graph = std::thread(process_pose_graph);
+	//	std::thread visualization_thread{ visualization };
+	//	loop_detection.detach();
+	//	pose_graph.detach();
+	//	//visualization_thread.detach();
+	//	//loop_detection.join();
+	//	//pose_graph.join();
+	//	//m_camera = CameraFactory::instance()->generateCameraFromYamlFile(CAM_NAMES_ESTIMATOR);
+	//}
 
     //std::thread visualization_thread {visualization};
     //visualization_thread.detach();
 
-	for (ni = 0; ni < imageNum; ++ni)
-	{
-		double tframe = vTimeStamps[ni];   //timestamp
-		uint32_t sec = tframe;
-		uint32_t nsec = (tframe - sec)*1e9;
-		nsec = (nsec / 1000) * 1000 + 500;
-		ros::Time image_timestamp = ros::Time(sec, nsec);
+    std::thread callback_thread([&](){
+        for (ni = 0; ni < imageNum; ++ni)
+        {
+            double tframe = vTimeStamps[ni];   //timestamp
+            uint32_t sec = tframe;
+            uint32_t nsec = (tframe - sec)*1e9;
+            nsec = (nsec / 1000) * 1000 + 500;
+            ros::Time image_timestamp = ros::Time(sec, nsec);
 
-		// 读取IMU数据以及对应的相机数据
-		LoadImus(fImus, image_timestamp);
-		image = cv::imread(vStrImagesFileNames[ni], cv::IMREAD_GRAYSCALE);
+            // 读取IMU数据以及对应的相机数据
+            LoadImus(fImus, image_timestamp);
+            image = cv::imread(vStrImagesFileNames[ni], cv::IMREAD_GRAYSCALE);
 
-		if (image.empty()) {
-			console::print_error("Failed to load image: %s\n", vStrImagesFileNames[ni].c_str());
-			return -1;
-		}
+            if (image.empty()) {
+                console::print_error("Failed to load image: %s\n", vStrImagesFileNames[ni].c_str());
+                return -1;
+            }
 
-		TicToc img_callback_time;
-		img_callback(image, image_timestamp);
-		console::print_value("img callback time: %dms\n", int(img_callback_time.toc()));
+            TicToc img_callback_time;
+            img_callback(image, image_timestamp);
+            console::print_value("img callback time: %dms\n", int(img_callback_time.toc()));
 
-		//wait to load the next frame image
-		//double T = 0;
-		//if (ni < imageNum - 1)
-		//	T = vTimeStamps[ni + 1] - tframe; //interval time between two consecutive frames,unit:second
-		//else if (ni > 0)    //lastest frame
-		//	T = tframe - vTimeStamps[ni - 1];
+            //wait to load the next frame image
+            //double T = 0;
+            //if (ni < imageNum - 1)
+            //	T = vTimeStamps[ni + 1] - tframe; //interval time between two consecutive frames,unit:second
+            //else if (ni > 0)    //lastest frame
+            //	T = tframe - vTimeStamps[ni - 1];
 
-		//if (timeSpent < T)
-		//	Sleep((T - timeSpent)*1e6); //sec->us:1e6
-		//else
-		//	cerr << endl << "process image speed too slow, larger than interval time between two consecutive frames" << endl;
-	}
+            //if (timeSpent < T)
+            //	Sleep((T - timeSpent)*1e6); //sec->us:1e6
+            //else
+            //	cerr << endl << "process image speed too slow, larger than interval time between two consecutive frames" << endl;
+        }
+    });
+    callback_thread.detach();
 
-	running_flag = false;
+    visualization();
+
+	/*running_flag = false;
 	while (!view_done) {
 #ifdef _WIN_
         Sleep(5);
 #elif _OSX_
         sleep(5);
 #endif
-    }
+    }*/
 
 	return 0;
 }
