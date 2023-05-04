@@ -305,7 +305,7 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
    
     {
         std::lock_guard<std::mutex> lg(m_state);
-        predict(imu_msg);
+		predict(imu_msg);
         /*std_msgs::Header header = imu_msg->header;
         header.frame_id = "world";
         if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
@@ -576,17 +576,20 @@ void process_pose_graph()
 // 视觉惯导里程计主线程
 void process()
 {
-    while (true) 
-    {
+    //while (true) 
+    //{
+		// 获取IMU与相机同一时间戳的数据对
         std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>, sensor_msgs::PointCloudConstPtr>> measurements;
-        std::unique_lock<std::mutex> lk(m_buf);
+        /*std::unique_lock<std::mutex> lk(m_buf);
         con.wait(lk, [&]{
             return (measurements = getMeasurements()).size() != 0;
         });
-        lk.unlock();
+        lk.unlock();*/
+		measurements = getMeasurements();
 
 		for (auto &measurement : measurements)
 		{
+			// 预积分
 			for (auto &imu_msg : measurement.first)
 				send_imu(imu_msg);
 
@@ -710,7 +713,7 @@ void process()
             update();
 		m_state.unlock();
 		m_buf.unlock();
-    }
+    //}
 }
 
 void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
@@ -881,19 +884,19 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 		feature_points->channels.push_back(id_of_point);
 		feature_points->channels.push_back(u_of_point);
 		feature_points->channels.push_back(v_of_point);
-		feature_callback(feature_points);          //add
+		feature_callback(feature_points);
 
 		// 可视化显示图像特征点
-		//cv::Mat tmp_img = show_img.rowRange(0, ROW);
-		//cv::cvtColor(show_img, tmp_img, cv::COLOR_GRAY2RGB);
-		//for (unsigned int j = 0; j < trackerData[0].cur_pts.size(); j++)
-		//{
-		//	double len = std::min(1.0, 1.0 * trackerData[0].track_cnt[j] / WINDOW_SIZE_FEATURE_TRACKER);
-		//	cv::circle(tmp_img, trackerData[0].cur_pts[j], 2, cv::Scalar(255 * (1 - len), 0, 255 * len), 2);
-		//}
-		//cv::namedWindow("vins", cv::WINDOW_NORMAL);
-		//cv::imshow("vins", tmp_img);
-		//cv::waitKey(5);
+		cv::Mat tmp_img = show_img.rowRange(0, ROW);
+		cv::cvtColor(show_img, tmp_img, cv::COLOR_GRAY2RGB);
+		for (unsigned int j = 0; j < trackerData[0].cur_pts.size(); j++)
+		{
+			double len = std::min(1.0, 1.0 * trackerData[0].track_cnt[j] / WINDOW_SIZE_FEATURE_TRACKER);
+			cv::circle(tmp_img, trackerData[0].cur_pts[j], 2, cv::Scalar(255 * (1 - len), 0, 255 * len), 2);
+		}
+		cv::namedWindow("vins", cv::WINDOW_NORMAL);
+		cv::imshow("vins", tmp_img);
+		cv::waitKey(5);
 	}
 }
 
@@ -960,6 +963,8 @@ void LoadImus(std::ifstream & fImus, const ros::Time &imageTimestamp)
 			nsec = (nsec / 1000) * 1000 + 500;
 			imudata->header.stamp = ros::Time(sec, nsec);
 			imu_callback(imudata);
+
+			// 获取imageTimestamp之前的所有IMU信息
 			if (imudata->header.stamp > imageTimestamp)
 				break;
 		}
@@ -988,6 +993,7 @@ int main(int argc, char **argv)
 	std::vector<std::string> vStrImagesFileNames;
 	std::vector<double> vTimeStamps;
 	LoadImages(std::string(argv[2]), std::string(argv[3]), vStrImagesFileNames, vTimeStamps);
+	m_camera = CameraFactory::instance()->generateCameraFromYamlFile(CAM_NAMES_ESTIMATOR);
 
 	int imageNum = vStrImagesFileNames.size();
 	if (imageNum <= 0){
@@ -999,8 +1005,8 @@ int main(int argc, char **argv)
 		console::print_value("%d\n", imageNum);
 	}
 
-	std::thread measurement_process{ process };
-	measurement_process.detach();
+	/*std::thread measurement_process{ process };
+	measurement_process.detach();*/
 
 	//std::thread loop_detection, pose_graph;
 	//if (LOOP_CLOSURE)
@@ -1019,7 +1025,7 @@ int main(int argc, char **argv)
     //std::thread visualization_thread {visualization};
     //visualization_thread.detach();
 
-    std::thread callback_thread([&](){
+    //std::thread callback_thread([&](){
         for (ni = 0; ni < imageNum; ++ni)
         {
             double tframe = vTimeStamps[ni];   //timestamp
@@ -1039,7 +1045,9 @@ int main(int argc, char **argv)
 
             TicToc img_callback_time;
             img_callback(image, image_timestamp);
-            console::print_value("img callback time: %dms\n", int(img_callback_time.toc()));
+			console::print_value("img callback time: %dms\n", int(img_callback_time.toc()));
+
+			process();
 
             //wait to load the next frame image
             //double T = 0;
@@ -1053,8 +1061,8 @@ int main(int argc, char **argv)
             //else
             //	cerr << endl << "process image speed too slow, larger than interval time between two consecutive frames" << endl;
         }
-    });
-    callback_thread.detach();
+    // });
+    //callback_thread.detach();
 
     visualization();
 

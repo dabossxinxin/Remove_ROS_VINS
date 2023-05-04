@@ -465,7 +465,8 @@ bool Estimator::relativePose(Eigen::Matrix3d &relative_R, Eigen::Vector3d &relat
             if(average_parallax * 460 > 30 && m_estimator.solveRelativeRT(corres, relative_R, relative_T))
             {
                 l = i;
-				std::cout << "average_parallax:" << average_parallax*460 <<  " choose l :" << l << " and newest frame to triangulate the whole structure, corres.size():" <<  corres.size()  << std::endl;
+				console::print_info("INFO: initialize average_parallax: %d\n", average_parallax * 460);
+				console::print_info("INFO: initialize choose l: %d, corres.size(): %d\n", l, corres.size());
                 return true;
             }
         }
@@ -724,6 +725,7 @@ void Estimator::optimization()
         }
     }
     relocalize = false;
+
     //loop close factor
     if(LOOP_CLOSURE)
     {
@@ -1036,7 +1038,7 @@ void Estimator::slideWindow()
                 all_image_frame.erase(all_image_frame.begin(), it_0);
 
             }
-            slideWindowOld();
+			slideWindowOld();
         }
     }
     else

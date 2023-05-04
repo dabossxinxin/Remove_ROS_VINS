@@ -4,7 +4,7 @@
 imu_topic: "/imu0"
 image_topic: "/cam0/image_raw"
 output_path: "/config/euroc/vins_result.csv"         # vins outputs will be wrttento vins_folder_path + output_path
-vins_folder_path: "E:\Xiongxinxin\Remove_ROS_VINS"
+vins_folder_path: ".."
 
 #camera calibration 
 model_type: PINHOLE
@@ -66,9 +66,9 @@ g_norm: 9.81007     # gravity magnitude
 
 
 #loop closure parameters
-loop_closure: 0   #if you want to use loop closure to minimize the drift, set loop_closure true and give your brief pattern file path and vocabulary file path accordingly;
+loop_closure: 1   #if you want to use loop closure to minimize the drift, set loop_closure true and give your brief pattern file path and vocabulary file path accordingly;
                      #also give the camera calibration file same as feature_tracker node
-pattern_file: "/support_files/brief_pattern.yml"
+pattern_file: "/support_files/brief_pattern.yaml"
 voc_file: "/support_files/brief_k10L6.bin"
 min_loop_num: 25
 

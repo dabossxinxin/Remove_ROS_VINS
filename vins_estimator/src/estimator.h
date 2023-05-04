@@ -4,6 +4,7 @@
 #include "feature_manager.h"
 #include "utility/utility.h"
 #include "utility/tic_toc.h"
+#include "utility/print.h"
 #include "initial/solve_5pts.h"
 #include "initial/initial_sfm.h"
 #include "initial/initial_alignment.h"

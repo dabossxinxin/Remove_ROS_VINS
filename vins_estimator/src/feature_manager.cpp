@@ -136,7 +136,7 @@ std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> FeatureManager::getCorr
 
             b = it.feature_per_frame[idx_r].point;
             
-            corres.push_back(std::make_pair(a, b));
+			corres.push_back(std::make_pair(a, b));
         }
     }
     return corres;
@@ -168,8 +168,8 @@ void FeatureManager::removeFailures()
          it != feature.end(); it = it_next)
     {
         it_next++;
-        if (it->solve_flag == 2)
-            feature.erase(it);
+		if (it->solve_flag == 2)
+			feature.erase(it);
     }
 }
 
@@ -349,7 +349,9 @@ void FeatureManager::removeFront(int frame_count)
         else
         {
             int j = WINDOW_SIZE - 1 - it->start_frame;
-            it->feature_per_frame.erase(it->feature_per_frame.begin() + j);
+			if (it->endFrame() < frame_count - 1)
+				continue;
+			it->feature_per_frame.erase(it->feature_per_frame.begin() + j);
             if (it->feature_per_frame.size() == 0)
                 feature.erase(it);
         }

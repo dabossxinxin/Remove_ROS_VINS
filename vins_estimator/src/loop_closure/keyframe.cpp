@@ -348,8 +348,9 @@ BriefExtractor::BriefExtractor(const std::string &pattern_file)
 	// the descriptors compatible with the predefined vocabulary
 
 	// loads the pattern
-	cv::FileStorage fs(pattern_file.c_str(), cv::FileStorage::READ);
-	if (!fs.isOpened()) throw std::string("Could not open file ") + pattern_file;
+	std::string filename = "D:\\Code\\Remove_ROS_VINS\\support_files\\brief_pattern.yaml";
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
+	if (!fs.isOpened()) throw std::string("Could not open file ") + filename;
 
 	std::vector<int> x1, y1, x2, y2;
 	fs["x1"] >> x1;

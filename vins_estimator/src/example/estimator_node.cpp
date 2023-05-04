@@ -306,7 +306,7 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
    
     {
         std::lock_guard<std::mutex> lg(m_state);
-        predict(imu_msg);
+		predict(imu_msg);
         /*std_msgs::Header header = imu_msg->header;
         header.frame_id = "world";
         if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
@@ -317,14 +317,14 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
 void feature_callback(const sensor_msgs::PointCloudConstPtr &feature_msg)
 {
     m_buf.lock();
-    feature_buf.push(feature_msg);
+	feature_buf.push(feature_msg);
     m_buf.unlock();
 	con.notify_one();
 }
 
 void send_imu(const sensor_msgs::ImuConstPtr &imu_msg)
 {
-    double t = imu_msg->header.stamp.toSec();
+	double t = imu_msg->header.stamp.toSec();
     if (current_time < 0)
         current_time = t;
     double dt = t - current_time;
@@ -1006,6 +1006,7 @@ int main(int argc, char **argv)
 		console::print_value("%d\n", imageNum);
 	}
 
+	m_camera = CameraFactory::instance()->generateCameraFromYamlFile(CAM_NAMES_ESTIMATOR);
 	std::thread measurement_process{ process };
 	measurement_process.detach();
 
@@ -1020,7 +1021,6 @@ int main(int argc, char **argv)
 		visualization_thread.detach();
 		//loop_detection.join();
 		//pose_graph.join();
-		//m_camera = CameraFactory::instance()->generateCameraFromYamlFile(CAM_NAMES_ESTIMATOR);
 	}
 
     //std::thread visualization_thread {visualization};
@@ -1042,11 +1042,13 @@ int main(int argc, char **argv)
 			console::print_error("Failed to load image: %s\n", vStrImagesFileNames[ni].c_str());
 			return -1;
 		}
-
+		
 		TicToc img_callback_time;
 		img_callback(image, image_timestamp);
-		console::print_value("img callback time: %dms\n", int(img_callback_time.toc()));
+		double timeSpent = img_callback_time.toc();
+		console::print_value("img callback time: %dms\n", int(timeSpent));
 
+		Sleep(200);
 		//wait to load the next frame image
 		//double T = 0;
 		//if (ni < imageNum - 1)
@@ -1055,9 +1057,9 @@ int main(int argc, char **argv)
 		//	T = tframe - vTimeStamps[ni - 1];
 
 		//if (timeSpent < T)
-		//	Sleep((T - timeSpent)*1e6); //sec->us:1e6
+		//	Sleep((T - timeSpent)); //sec->us:1e6
 		//else
-		//	cerr << endl << "process image speed too slow, larger than interval time between two consecutive frames" << endl;
+		//	std::cerr << std::endl << "process image speed too slow, larger than interval time between two consecutive frames" << std::endl;
 	}
 
 	running_flag = false;
@@ -1065,7 +1067,7 @@ int main(int argc, char **argv)
 #ifdef _WIN_
         Sleep(5);
 #elif _OSX_
-        sleep(5);
+        sleep(5);   
 #endif
     }
 

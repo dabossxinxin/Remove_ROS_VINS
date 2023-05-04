@@ -78,6 +78,7 @@ namespace camodocal
 #include <sys/timeb.h>
 #include <sys/types.h>
 #include <winsock.h>
+#include <time.h>
 	LARGE_INTEGER
 		getFILETIMEoffset()
 	{
