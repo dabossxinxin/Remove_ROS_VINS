@@ -16,7 +16,7 @@ KeyFrameDatabase::KeyFrameDatabase()
 
 void KeyFrameDatabase::viewPointClouds()
 {
-	//std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
+	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
 	GLfloat size = 1.0;
 	for (auto keyframe = keyFrameList.begin(); keyframe != keyFrameList.end(); ++keyframe)
 	{
@@ -35,7 +35,7 @@ void KeyFrameDatabase::viewPointClouds()
 
 void KeyFrameDatabase::viewPath()
 {
-	//std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
+	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
 	GLfloat line_width = 1.2;
 	Eigen::Vector3d tmp_path;
 	glColor3f(1.0f, 0.0f, 0.0f);

@@ -337,7 +337,7 @@ BriefExtractor::BriefExtractor(const std::string &pattern_file)
 	// the descriptors compatible with the predefined vocabulary
 
 	// loads the pattern
-	std::string filename = "E:\\Xiongxinxin\\Remove_ROS_VINS\\support_files\\brief_pattern.yaml";
+	std::string filename = "D:\\Code\\Remove_ROS_VINS\\support_files\\brief_pattern.yaml";
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
 	if (!fs.isOpened()) throw std::string("Could not open file ") + filename;
 

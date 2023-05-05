@@ -317,21 +317,19 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header, Eig
         pub_loop_path.publish(loop_path);
 */
         // write result to file
-		std::ofstream foutC(VINS_RESULT_PATH, std::ios::app);
+		std::string filename = "D:\\Code\\Remove_ROS_VINS\\config\\euroc\\vins_result.csv";
+		std::ofstream foutC(filename.c_str(), std::ios::app);
         foutC.setf(std::ios::fixed, std::ios::floatfield);
         foutC.precision(0);
-        foutC << header.stamp.toSec() * 1e9 << ",";
-        foutC.precision(5);
-        foutC << correct_t.x() << ","
-              << correct_t.y() << ","
-              << correct_t.z() << ","
-              << correct_q.w() << ","
-              << correct_q.x() << ","
-              << correct_q.y() << ","
-              << correct_q.z() << ","
-              << correct_v(0) << ","
-              << correct_v(1) << ","
-              << correct_v(2) << "," << std::endl;
+        foutC << header.stamp.toSec() * 1e9 << " ";
+        foutC.precision(9);
+        foutC << correct_t.x() << " "
+              << correct_t.y() << " "
+              << correct_t.z() << " "
+              << correct_q.x() << " "
+              << correct_q.y() << " "
+              << correct_q.z() << " "
+              << correct_q.w() << std::endl;
         foutC.close();
     }
 }

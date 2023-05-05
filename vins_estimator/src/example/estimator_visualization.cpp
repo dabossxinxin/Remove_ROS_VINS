@@ -199,7 +199,7 @@ void visualization()
 		if (menuFollowCamera)
 			s_cam.Follow(Twc);
 		d_cam.Activate(s_cam);
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f); //背景色设置为白色
+		glClearColor(0.0f, 0.0f, 0.0f, 0.5f); //背景色设置为白色
 		DrawCurrentCamera(Twc);
 		if (menuShowPoints)
 			keyframe_database.viewPointClouds();
@@ -591,6 +591,7 @@ void process()
 				image[feature_id].emplace_back(camera_id, Eigen::Vector3d(x, y, z));
 			}
 			estimator.processImage(image, img_msg->header);
+			console::print_info("INFO: estimator.processImage time: %d ms\n", int(t_s.toc()));
 
 			if (LOOP_CLOSURE)
 			{
@@ -943,7 +944,7 @@ void LoadImus(std::ifstream & fImus, const ros::Time &imageTimestamp)
 			imudata->linear_acceleration.z = data[6];
 			uint32_t  sec = data[0];
 			uint32_t nsec = (data[0] - sec)*1e9;
-			nsec = (nsec / 1000) * 1000 + 500;
+			//nsec = (nsec / 1000) * 1000 + 500;
 			imudata->header.stamp = ros::Time(sec, nsec);
 			imu_callback(imudata);
 
@@ -988,33 +989,13 @@ int main(int argc, char **argv)
 		console::print_value("%d\n", imageNum);
 	}
 
-	/*std::thread measurement_process{ process };
-	measurement_process.detach();*/
-
-	//std::thread loop_detection, pose_graph;
-	//if (LOOP_CLOSURE)
-	//{
-	//	loop_detection = std::thread(process_loop_detection);
-	//	pose_graph = std::thread(process_pose_graph);
-	//	std::thread visualization_thread{ visualization };
-	//	loop_detection.detach();
-	//	pose_graph.detach();
-	//	//visualization_thread.detach();
-	//	//loop_detection.join();
-	//	//pose_graph.join();
-	//	//m_camera = CameraFactory::instance()->generateCameraFromYamlFile(CAM_NAMES_ESTIMATOR);
-	//}
-
-    //std::thread visualization_thread {visualization};
-    //visualization_thread.detach();
-
     std::thread callback_thread([&](){
         for (ni = 0; ni < imageNum; ++ni)
         {
             double tframe = vTimeStamps[ni];   //timestamp
             uint32_t sec = tframe;
             uint32_t nsec = (tframe - sec)*1e9;
-            nsec = (nsec / 1000) * 1000 + 500;
+            //nsec = (nsec / 1000) * 1000 + 500;
 			ros::Time image_timestamp = ros::Time(sec, nsec);
 
             // 读取IMU数据以及对应的相机数据
@@ -1022,29 +1003,25 @@ int main(int argc, char **argv)
             image = cv::imread(vStrImagesFileNames[ni], cv::IMREAD_GRAYSCALE);
 
             if (image.empty()) {
-                console::print_error("Failed to load image: %s\n", vStrImagesFileNames[ni].c_str());
+                console::print_error("ERROR: failed to load image: %s\n", vStrImagesFileNames[ni].c_str());
                 return -1;
             }
 
             TicToc img_callback_time;
             img_callback(image, image_timestamp);
-			console::print_value("img callback time: %dms\n", int(img_callback_time.toc()));
-
+			console::print_info("INFO: img callback time: %d ms\n", int(img_callback_time.toc()));
+			
+			TicToc t_vio;
 			process();
+			console::print_info("INFO: front end vio time: %d ms\n", int(t_vio.toc()));
+
+			TicToc t_loop_detection;
 			process_loop_detection();
+			console::print_info("INFO: loop detection time: %d ms\n", int(t_loop_detection.toc()));
+
+			TicToc t_pose_graph;
 			process_pose_graph();
-
-            //wait to load the next frame image
-            //double T = 0;
-            //if (ni < imageNum - 1)
-            //	T = vTimeStamps[ni + 1] - tframe; //interval time between two consecutive frames,unit:second
-            //else if (ni > 0)    //lastest frame
-            //	T = tframe - vTimeStamps[ni - 1];
-
-            //if (timeSpent < T)
-            //	Sleep((T - timeSpent)*1e6); //sec->us:1e6
-            //else
-            //	cerr << endl << "process image speed too slow, larger than interval time between two consecutive frames" << endl;
+			console::print_info("INFO: loop pose graph time: %d ms\n", int(t_pose_graph.toc()));
         }
 	});
     callback_thread.detach();
