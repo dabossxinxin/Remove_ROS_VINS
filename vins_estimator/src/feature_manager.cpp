@@ -348,6 +348,9 @@ void FeatureManager::removeFront(int frame_count)
         }
         else
         {
+			if (it->endFrame() < WINDOW_SIZE - 1) {
+				continue;
+			}
             int j = WINDOW_SIZE - 1 - it->start_frame;
 			if (it->endFrame() < frame_count - 1)
 				continue;

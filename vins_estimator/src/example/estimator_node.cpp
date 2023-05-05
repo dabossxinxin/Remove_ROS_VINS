@@ -463,7 +463,7 @@ void process_loop_detection()
 					cv::Mat gray_img, loop_match_img;
 					cv::Mat old_img = old_kf->image;
 					cv::hconcat(old_img, current_image, gray_img);
-					cvtColor(gray_img, loop_match_img, cv::COLOR_GRAY2RGB);
+					cv::cvtColor(gray_img, loop_match_img, cv::COLOR_GRAY2RGB);
 					cv::Mat loop_match_img2;
 					loop_match_img2 = loop_match_img.clone();
 					/*
@@ -536,7 +536,7 @@ void process_loop_detection()
 // 位姿图优化主线程
 void process_pose_graph()
 {
-    while(true)            
+    while(true)        
     {
         m_posegraph_buf.lock();
         int index = -1;
@@ -997,7 +997,7 @@ int main(int argc, char **argv)
 	LoadImages(std::string(argv[2]), std::string(argv[3]), vStrImagesFileNames, vTimeStamps);
 
 	int imageNum = vStrImagesFileNames.size();
-	if (imageNum <= 0){
+	if (imageNum <= 0) {
 		console::print_error("ERROR: Failed to load images\n");
 		return 1;
 	}
@@ -1007,6 +1007,7 @@ int main(int argc, char **argv)
 	}
 
 	m_camera = CameraFactory::instance()->generateCameraFromYamlFile(CAM_NAMES_ESTIMATOR);
+<<<<<<< Updated upstream
 	std::thread measurement_process{ process };
 	measurement_process.detach();
 
@@ -1022,6 +1023,8 @@ int main(int argc, char **argv)
 		//loop_detection.join();
 		//pose_graph.join();
 	}
+=======
+>>>>>>> Stashed changes
 
     //std::thread visualization_thread {visualization};
     //visualization_thread.detach();
@@ -1048,6 +1051,7 @@ int main(int argc, char **argv)
 		double timeSpent = img_callback_time.toc();
 		console::print_value("img callback time: %dms\n", int(timeSpent));
 
+<<<<<<< Updated upstream
 		Sleep(200);
 		//wait to load the next frame image
 		//double T = 0;
@@ -1060,16 +1064,126 @@ int main(int argc, char **argv)
 		//	Sleep((T - timeSpent)); //sec->us:1e6
 		//else
 		//	std::cerr << std::endl << "process image speed too slow, larger than interval time between two consecutive frames" << std::endl;
+=======
+		process();
+
+		if (LOOP_CLOSURE)
+		{
+			process_loop_detection();
+			process_pose_graph();
+			visualization();
+		}
+>>>>>>> Stashed changes
 	}
 
 	running_flag = false;
 	while (!view_done) {
 #ifdef _WIN_
-        Sleep(5);
+		Sleep(5);
 #elif _OSX_
+<<<<<<< Updated upstream
         sleep(5);   
+=======
+		sleep(5);
+>>>>>>> Stashed changes
 #endif
-    }
+	}
 
 	return 0;
 }
+
+//int main(int argc, char **argv)
+//{
+//	if (argc != 5) {
+//		console::print_error("Usage: ./vins_estimator path_to_setting_file path_to_image_folder path_to_times_file path_to_imu_data_file\n");
+//		return -1;
+//	}
+//
+//	std::ifstream fImus;
+//	fImus.open(argv[4]);
+//
+//	cv::Mat image;
+//	int ni = 0;
+//
+//	readParameters(argv[1]);
+//
+//	estimator.setParameter();
+//	for (int i = 0; i < NUM_OF_CAM; i++)
+//		trackerData[i].readIntrinsicParameter(CAM_NAMES[i]);
+//
+//	std::vector<std::string> vStrImagesFileNames;
+//	std::vector<double> vTimeStamps;
+//	LoadImages(std::string(argv[2]), std::string(argv[3]), vStrImagesFileNames, vTimeStamps);
+//
+//	int imageNum = vStrImagesFileNames.size();
+//	if (imageNum <= 0){
+//		console::print_error("ERROR: Failed to load images\n");
+//		return 1;
+//	}
+//	else {
+//		console::print_highlight("Load image num: ");
+//		console::print_value("%d\n", imageNum);
+//	}
+//
+//	m_camera = CameraFactory::instance()->generateCameraFromYamlFile(CAM_NAMES_ESTIMATOR);
+//	std::thread measurement_process{ process };
+//	measurement_process.detach();
+//
+//	std::thread loop_detection, pose_graph;
+//	if (LOOP_CLOSURE)
+//	{
+//		loop_detection = std::thread(process_loop_detection);
+//		pose_graph = std::thread(process_pose_graph);
+//		std::thread visualization_thread{ visualization };
+//		loop_detection.detach();
+//		pose_graph.detach();
+//		visualization_thread.detach();
+//		//loop_detection.join();
+//		//pose_graph.join();
+//	}
+//
+//	for (ni = 0; ni < imageNum; ++ni)
+//	{
+//		double tframe = vTimeStamps[ni];   //timestamp
+//		uint32_t sec = tframe;
+//		uint32_t nsec = (tframe - sec)*1e9;
+//		nsec = (nsec / 1000) * 1000 + 500;
+//		ros::Time image_timestamp = ros::Time(sec, nsec);
+//
+//		// 读取IMU数据以及对应的相机数据
+//		LoadImus(fImus, image_timestamp);
+//		image = cv::imread(vStrImagesFileNames[ni], cv::IMREAD_GRAYSCALE);
+//
+//		if (image.empty()) {
+//			console::print_error("Failed to load image: %s\n", vStrImagesFileNames[ni].c_str());
+//			return -1;
+//		}
+//
+//		TicToc img_callback_time;
+//		img_callback(image, image_timestamp);
+//		console::print_value("img callback time: %dms\n", int(img_callback_time.toc()));
+//
+//		//wait to load the next frame image
+//		//double T = 0;
+//		//if (ni < imageNum - 1)
+//		//	T = vTimeStamps[ni + 1] - tframe; //interval time between two consecutive frames,unit:second
+//		//else if (ni > 0)    //lastest frame
+//		//	T = tframe - vTimeStamps[ni - 1];
+//
+//		//if (timeSpent < T)
+//		//	Sleep((T - timeSpent)*1e6); //sec->us:1e6
+//		//else
+//		//	cerr << endl << "process image speed too slow, larger than interval time between two consecutive frames" << endl;
+//	}
+//
+//	running_flag = false;
+//	while (!view_done) {
+//#ifdef _WIN_
+//        Sleep(5);
+//#elif _OSX_
+//        sleep(5);
+//#endif
+//    }
+//
+//	return 0;
+//}
