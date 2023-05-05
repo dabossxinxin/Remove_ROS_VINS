@@ -1,41 +1,40 @@
 #include "keyframe.h"
 
-KeyFrame::KeyFrame(double _header, Eigen::Vector3d _vio_T_w_i, Eigen::Matrix3d _vio_R_w_i, 
-                   Eigen::Vector3d _cur_T_w_i, Eigen::Matrix3d _cur_R_w_i, 
-                   cv::Mat &_image, const char *_brief_pattern_file, Eigen::Vector3d _relocalize_t, Eigen::Matrix3d _relocalize_r)
-:header{_header}, image{_image}, BRIEF_PATTERN_FILE(_brief_pattern_file)
-{
-    T_w_i = _cur_T_w_i;
-    R_w_i = _cur_R_w_i;
-    COL = image.cols;
-    ROW = image.rows;
-    use_retrive = false;
-    is_looped = 0;
-    has_loop = 0;
-    update_loop_info = 0;
-    vio_T_w_i = _vio_T_w_i;
-    vio_R_w_i = _vio_R_w_i;
-	relocalize_t = _relocalize_t; // solomon add for draw point cloud 
-	relocalize_r = _relocalize_r;
-}
-
-/*****************************************utility function************************************************/
-bool inBorder(const cv::Point2f &pt, int COL, int ROW)
-{
-    const int BORDER_SIZE = 1;
-    int img_x = cvRound(pt.x);
-    int img_y = cvRound(pt.y);
-    return BORDER_SIZE <= img_x && img_x < COL - BORDER_SIZE && BORDER_SIZE <= img_y && img_y < ROW - BORDER_SIZE;
-}
-
 template <typename Derived>
 static void reduceVector(std::vector<Derived> &v, std::vector<uchar> status)
 {
-    int j = 0;
-    for (int i = 0; i < int(v.size()); i++)
-        if (status[i])
-            v[j++] = v[i];
-    v.resize(j);
+	int j = 0;
+	for (int i = 0; i < int(v.size()); i++)
+		if (status[i])
+			v[j++] = v[i];
+	v.resize(j);
+}
+
+bool inBorder(const cv::Point2f &pt, int COL, int ROW)
+{
+	const int BORDER_SIZE = 1;
+	int img_x = cvRound(pt.x);
+	int img_y = cvRound(pt.y);
+	return BORDER_SIZE <= img_x && img_x < COL - BORDER_SIZE && BORDER_SIZE <= img_y && img_y < ROW - BORDER_SIZE;
+}
+
+KeyFrame::KeyFrame(double _header, Eigen::Vector3d _vio_T_w_i, Eigen::Matrix3d _vio_R_w_i, 
+                   Eigen::Vector3d _cur_T_w_i, Eigen::Matrix3d _cur_R_w_i, cv::Mat &_image,
+				   const char *_brief_pattern_file, Eigen::Vector3d _relocalize_t, 
+				   Eigen::Matrix3d _relocalize_r) :header{_header}, image{_image}, BRIEF_PATTERN_FILE(_brief_pattern_file)
+{
+	T_w_i = _cur_T_w_i;
+	R_w_i = _cur_R_w_i;
+	COL = image.cols;
+	ROW = image.rows;
+	retrive = false;
+	is_looped = 0;
+	has_loop = 0;
+	update_loop_info = 0;
+	vio_T_w_i = _vio_T_w_i;
+	vio_R_w_i = _vio_R_w_i;
+	relocalize_t = _relocalize_t; // solomon add for draw point cloud 
+	relocalize_r = _relocalize_r;
 }
 
 void KeyFrame::extractBrief(cv::Mat &image)
@@ -46,9 +45,10 @@ void KeyFrame::extractBrief(cv::Mat &image)
     for(int i = 0; i< (int)measurements.size(); i++)
     {
         window_keypoints.push_back(keypoints[start + i]);
-        window_descriptors.push_back(descriptors[start + i]);
+		window_descriptors.push_back(descriptors[start + i]);
     }
 }
+
 void KeyFrame::setExtrinsic(Eigen::Vector3d T, Eigen::Matrix3d R)
 {
 	qic = R;
@@ -60,20 +60,17 @@ void KeyFrame::buildKeyFrameFeatures(Estimator &estimator, const camodocal::Came
 	for (auto &it_per_id : estimator.f_manager.feature)
 	{
 		it_per_id.used_num = it_per_id.feature_per_frame.size();
-		//if (!(it_per_id.used_num >= 2 && it_per_id.start_frame < WINDOW_SIZE - 2))
-		//    continue;
 
 		int frame_size = it_per_id.feature_per_frame.size();
-		if (it_per_id.start_frame <= WINDOW_SIZE - 2 && it_per_id.start_frame + frame_size - 1 >= WINDOW_SIZE - 2)
+		if (it_per_id.start_frame <= WINDOW_SIZE - 2 && it_per_id.endFrame() >= WINDOW_SIZE - 2)
 		{
-			//features current measurements
 			Eigen::Vector3d point = it_per_id.feature_per_frame[WINDOW_SIZE - 2 - it_per_id.start_frame].point;
 			Eigen::Vector2d point_uv;
 			m_camera->spaceToPlane(point, point_uv);
 			measurements.push_back(cv::Point2f(point_uv.x(), point_uv.y()));
 			pts_normalize.push_back(cv::Point2f(point.x() / point.z(), point.y() / point.z()));
 			features_id.push_back(it_per_id.feature_id);
-			//features 3D pos from first measurement and inverse depth
+
 			Eigen::Vector3d pts_i = it_per_id.feature_per_frame[0].point * it_per_id.estimated_depth;
 			point_clouds.push_back(estimator.Rs[it_per_id.start_frame] * (qic * pts_i + tic) + estimator.Ps[it_per_id.start_frame]);
 		}
@@ -97,13 +94,15 @@ bool KeyFrame::searchInAera(cv::Point2f center_cur, float area_size,
 	const std::vector<cv::KeyPoint> &keypoints_old,
 	cv::Point2f &best_match)
 {
-	cv::Point2f best_pt;
 	int bestDist = 128;
 	int bestIndex = -1;
 	for (int i = 0; i < (int)descriptors_old.size(); i++)
 	{
-		if (!inAera(keypoints_old[i].pt, center_cur, area_size))
+		// 用于加速描述子暴力匹配的过程
+		if (!inAera(keypoints_old[i].pt, center_cur, area_size)) 
+		{
 			continue;
+		}
 
 		int dis = HammingDis(window_descriptor, descriptors_old[i]);
 		if (dis < bestDist)
@@ -122,8 +121,7 @@ bool KeyFrame::searchInAera(cv::Point2f center_cur, float area_size,
 }
 
 void KeyFrame::FundmantalMatrixRANSAC(std::vector<cv::Point2f> &measurements_old,
-	std::vector<cv::Point2f> &measurements_old_norm,
-	const camodocal::CameraPtr &m_camera)
+	std::vector<cv::Point2f> &measurements_old_norm, const camodocal::CameraPtr &m_camera)
 {
 	if (measurements_old.size() >= 8)
 	{
@@ -205,7 +203,6 @@ void KeyFrame::PnPRANSAC(std::vector<cv::Point2f> &measurements_old,
 		pts_3_vector.push_back(cv::Point3f((float)it.x(), (float)it.y(), (float)it.z()));
 
 	cv::Mat inliers;
-	TicToc t_pnp_ransac;
 	if (CV_MAJOR_VERSION < 3)
 		solvePnPRansac(pts_3_vector, measurements_old_norm, K, D, rvec, t, true, 100, 10.0 / 460.0, 100, inliers);
 	else
@@ -216,12 +213,8 @@ void KeyFrame::PnPRANSAC(std::vector<cv::Point2f> &measurements_old,
 			solvePnPRansac(pts_3_vector, measurements_old_norm, K, D, rvec, t, true, 100, 10.0 / 460.0, 0.99, inliers);
 
 	}
-	// ROS_DEBUG("t_pnp_ransac %f ms", t_pnp_ransac.toc());
 
-	std::vector<uchar> status;
-	for (int i = 0; i < (int)measurements_old_norm.size(); i++)
-		status.push_back(0);
-
+	std::vector<uchar> status(measurements_old_norm.size(), 0);
 	for (int i = 0; i < inliers.rows; i++)
 	{
 		int n = inliers.at<int>(i);
@@ -246,19 +239,16 @@ void KeyFrame::PnPRANSAC(std::vector<cv::Point2f> &measurements_old,
 	reduceVector(point_clouds_matched, status);
 }
 
-bool KeyFrame::findConnectionWithOldFrame(const KeyFrame* old_kf,
-	std::vector<cv::Point2f> &measurements_old, std::vector<cv::Point2f> &measurements_old_norm,
-	Eigen::Vector3d &PnP_T_old, Eigen::Matrix3d &PnP_R_old,
+bool KeyFrame::findConnectionWithOldFrame(const KeyFrame* old_kf,std::vector<cv::Point2f> &measurements_old,
+	std::vector<cv::Point2f> &measurements_old_norm, Eigen::Vector3d &PnP_T_old, Eigen::Matrix3d &PnP_R_old,
 	const camodocal::CameraPtr &m_camera)
 {
-	TicToc t_match;
 	searchByDes(measurements_old, measurements_old_norm, old_kf->descriptors, old_kf->keypoints, m_camera);
 	FundmantalMatrixRANSAC(measurements_old, measurements_old_norm, m_camera);
 	if ((int)measurements_old_norm.size() > MIN_LOOP_NUM)
 	{
 		PnPRANSAC(measurements_old, measurements_old_norm, PnP_T_old, PnP_R_old);
 	}
-	// ROS_DEBUG("loop final use num %d %lf---------------", (int)measurements_old.size(), t_match.toc());
 	return true;
 }
 
@@ -336,8 +326,7 @@ void KeyFrame::getPath(Eigen::Vector3d& path)
 int KeyFrame::HammingDis(const BRIEF::bitset &a, const BRIEF::bitset &b)
 {
 	BRIEF::bitset xor_of_bitset = a ^ b;
-	int dis = xor_of_bitset.count();
-	return dis;
+	return xor_of_bitset.count();
 }
 
 BriefExtractor::BriefExtractor(const std::string &pattern_file)
@@ -348,7 +337,7 @@ BriefExtractor::BriefExtractor(const std::string &pattern_file)
 	// the descriptors compatible with the predefined vocabulary
 
 	// loads the pattern
-	std::string filename = "E:\\Xiongxinxin\\Remove_ROS_VINS\\support_files\\brief_pattern.yml";
+	std::string filename = "E:\\Xiongxinxin\\Remove_ROS_VINS\\support_files\\brief_pattern.yaml";
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
 	if (!fs.isOpened()) throw std::string("Could not open file ") + filename;
 
@@ -364,8 +353,7 @@ BriefExtractor::BriefExtractor(const std::string &pattern_file)
 void BriefExtractor::operator() (const cv::Mat &im, const std::vector<cv::Point2f> window_pts,
 	std::vector<cv::KeyPoint> &keys, std::vector<BRIEF::bitset> &descriptors) const
 {
-	// extract FAST keypoints with opencv
-	const int fast_th = 20; // corner detector response threshold
+	const int fast_th = 20;
 	cv::FAST(im, keys, fast_th, true);
 	for (int i = 0; i < (int)window_pts.size(); i++)
 	{
@@ -373,6 +361,5 @@ void BriefExtractor::operator() (const cv::Mat &im, const std::vector<cv::Point2
 		key.pt = window_pts[i];
 		keys.push_back(key);
 	}
-	// compute their BRIEF descriptor
 	m_brief.compute(im, keys, descriptors);
 }

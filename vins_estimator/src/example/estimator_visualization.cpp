@@ -301,10 +301,9 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
     m_buf.lock();
     imu_buf.push(imu_msg);
     m_buf.unlock();
-	//con.notify_one();   
    
     {
-        std::lock_guard<std::mutex> lg(m_state);
+		std::lock_guard<std::mutex> lg(m_state);
 		predict(imu_msg);
         /*std_msgs::Header header = imu_msg->header;
         header.frame_id = "world";
@@ -324,8 +323,8 @@ void feature_callback(const sensor_msgs::PointCloudConstPtr &feature_msg)
 void send_imu(const sensor_msgs::ImuConstPtr &imu_msg)
 {
     double t = imu_msg->header.stamp.toSec();
-    if (current_time < 0)
-        current_time = t;
+	if (current_time < 0)
+		current_time = t;
     double dt = t - current_time;
     current_time = t;
 
@@ -341,7 +340,7 @@ void send_imu(const sensor_msgs::ImuConstPtr &imu_msg)
     double rz = imu_msg->angular_velocity.z - bg[2];
     //ROS_DEBUG("IMU %f, dt: %f, acc: %f %f %f, gyr: %f %f %f", t, dt, dx, dy, dz, rx, ry, rz);
 
-    estimator.processIMU(dt, Eigen::Vector3d(dx, dy, dz), Eigen::Vector3d(rx, ry, rz));
+	estimator.processIMU(dt, Eigen::Vector3d(dx, dy, dz), Eigen::Vector3d(rx, ry, rz));
 }
 
 // 闭环检测线程主函数
@@ -358,8 +357,9 @@ void process_loop_detection()
 		loop_closure->initCameraModel(CAM_NAMES_ESTIMATOR);
 	}
 
-	while (LOOP_CLOSURE)
-	{
+	//while (LOOP_CLOSURE)
+	//{
+		// 取最近的一帧关键帧作为当前帧
 		KeyFrame* cur_kf = NULL;
 		m_keyframe_buf.lock();
 		while (!keyframe_buf.empty())
@@ -370,8 +370,10 @@ void process_loop_detection()
 			keyframe_buf.pop();
 		}
 		m_keyframe_buf.unlock();
+
 		if (cur_kf != NULL)
 		{
+			// 将当前关键帧加入到关键帧数据库中
 			cur_kf->global_index = global_frame_cnt;
 			m_keyframedatabase_resample.lock();
 			keyframe_database.add(cur_kf);
@@ -380,36 +382,32 @@ void process_loop_detection()
 			cv::Mat current_image;
 			current_image = cur_kf->image;
 
+			// 提取当前帧的描述子
 			bool loop_succ = false;
 			int old_index = -1;
 			std::vector<cv::Point2f> cur_pts;
 			std::vector<cv::Point2f> old_pts;
-			TicToc t_brief;
 			cur_kf->extractBrief(current_image);
-			//printf("loop extract %d feature using %lf\n", cur_kf->keypoints.size(), t_brief.toc());
-			TicToc t_loopdetect;
+
+			// 当前帧在关键帧数据库中寻找可能的回环帧
+			TicToc t_loop_detect;
 			loop_succ = loop_closure->startLoopClosure(cur_kf->keypoints, cur_kf->descriptors, cur_pts, old_pts, old_index);
-			double t_loop = t_loopdetect.toc();
-			//ROS_DEBUG("t_loopdetect %f ms", t_loop);
-			//cout << "t_loopdetect %f ms" << t_loop << endl;
+			int t_loop_detect_spend = t_loop_detect.toc();
+			console::print_info("INFO: detect loop status %d time: %d ms.\n", int(loop_succ), t_loop_detect_spend);
+			
 			if (loop_succ)
 			{
 				KeyFrame* old_kf = keyframe_database.getKeyframe(old_index);
 				if (old_kf == NULL)
 				{
-					// ROS_WARN("NO such frame in keyframe_database");
-					std::cout << "WARN: NO such frame in keyframe_database" << std::endl;
-					// ROS_BREAK();
-					//break;
-					continue;
+					console::print_warn("WARN: no such frame in keyframe database.\n");
+					return;
 				}
-				//ROS_DEBUG("loop succ %d with %drd image", global_frame_cnt, old_index);
-				//cout << "loop succ " <<global_frame_cnt <<  " with " << old_index << "rd image" << endl;
 				assert(old_index != -1);
 
+				// 使用PnP计算闭环帧的姿态
 				Eigen::Vector3d T_w_i_old, PnP_T_old;
 				Eigen::Matrix3d R_w_i_old, PnP_R_old;
-
 				old_kf->getPose(T_w_i_old, R_w_i_old);
 				std::vector<cv::Point2f> measurements_old;
 				std::vector<cv::Point2f> measurements_old_norm;
@@ -418,11 +416,11 @@ void process_loop_detection()
 				cur_kf->findConnectionWithOldFrame(old_kf, measurements_old, measurements_old_norm, PnP_T_old, PnP_R_old, m_camera);
 				measurements_cur = cur_kf->measurements_matched;
 				features_id_matched = cur_kf->features_id_matched;
+
 				//send loop info to VINS relocalization
 				int loop_fusion = 0;
 				if ((int)measurements_old_norm.size() > MIN_LOOP_NUM && global_frame_cnt - old_index > 35 && old_index > 30)
 				{
-
 					Eigen::Quaterniond PnP_Q_old(PnP_R_old);
 					RetriveData retrive_data;
 					retrive_data.cur_index = cur_kf->global_index;
@@ -440,9 +438,11 @@ void process_loop_detection()
 					retrive_data.loop_pose[4] = PnP_Q_old.y();
 					retrive_data.loop_pose[5] = PnP_Q_old.z();
 					retrive_data.loop_pose[6] = PnP_Q_old.w();
+
 					m_retrive_data_buf.lock();
 					retrive_data_buf.push(retrive_data);
 					m_retrive_data_buf.unlock();
+
 					cur_kf->detectLoop(old_index);
 					old_kf->is_looped = 1;
 					loop_fusion = 1;
@@ -454,89 +454,66 @@ void process_loop_detection()
 					m_update_visualization.unlock();
 				}
 
-				// visualization loop info
+				// 绘制闭环匹配关系
 				if (0 && loop_fusion)
 				{
-					int COL = current_image.cols;
-					//int ROW = current_image.rows;
+					int imgCols = current_image.cols;
 					cv::Mat gray_img, loop_match_img;
 					cv::Mat old_img = old_kf->image;
 					cv::hconcat(old_img, current_image, gray_img);
-					cvtColor(gray_img, loop_match_img, cv::COLOR_GRAY2RGB);
-					cv::Mat loop_match_img2;
-					loop_match_img2 = loop_match_img.clone();
-					/*
-					for(int i = 0; i< (int)cur_pts.size(); i++)
-					{
-						cv::Point2f cur_pt = cur_pts[i];
-						cur_pt.x += COL;
-						cv::circle(loop_match_img, cur_pt, 5, cv::Scalar(0, 255, 0));
-					}
-					for(int i = 0; i< (int)old_pts.size(); i++)
-					{
-						cv::circle(loop_match_img, old_pts[i], 5, cv::Scalar(0, 255, 0));
-					}
-					for (int i = 0; i< (int)old_pts.size(); i++)
-					{
-						cv::Point2f cur_pt = cur_pts[i];
-						cur_pt.x += COL ;
-						cv::line(loop_match_img, old_pts[i], cur_pt, cv::Scalar(0, 255, 0), 1, 8, 0);
-					}
-					ostringstream convert;
-					convert << "/home/tony-ws/raw_data/loop_image/"
-							<< cur_kf->global_index << "-"
-							<< old_index << "-" << loop_fusion <<".jpg";
-					cv::imwrite( convert.str().c_str(), loop_match_img);
-					*/
+					cv::cvtColor(gray_img, loop_match_img, cv::COLOR_GRAY2RGB);
+					
 					for (int i = 0; i < (int)measurements_cur.size(); i++)
 					{
 						cv::Point2f cur_pt = measurements_cur[i];
-						cur_pt.x += COL;
-						cv::circle(loop_match_img2, cur_pt, 5, cv::Scalar(0, 255, 0));
+						cur_pt.x += imgCols;
+						cv::circle(loop_match_img, cur_pt, 5, cv::Scalar(0, 255, 0));
 					}
 					for (int i = 0; i < (int)measurements_old.size(); i++)
 					{
-						cv::circle(loop_match_img2, measurements_old[i], 5, cv::Scalar(0, 255, 0));
+						cv::circle(loop_match_img, measurements_old[i], 5, cv::Scalar(0, 255, 0));
 					}
 					for (int i = 0; i < (int)measurements_old.size(); i++)
 					{
 						cv::Point2f cur_pt = measurements_cur[i];
-						cur_pt.x += COL;
-						cv::line(loop_match_img2, measurements_old[i], cur_pt, cv::Scalar(0, 255, 0), 1, 8, 0);
+						cur_pt.x += imgCols;
+						cv::line(loop_match_img, measurements_old[i], cur_pt, cv::Scalar(0, 255, 0), 1, 8, 0);
 					}
 
-					std::ostringstream convert2;
-					convert2 << "/home/tony-ws/raw_data/loop_image/"
+					std::ostringstream convert;
+					convert << "C:\\Users\\jackchen\\Desktop\\debug\\"
 						<< cur_kf->global_index << "-"
-						<< old_index << "-" << loop_fusion << "-2.jpg";
-					cv::imwrite(convert2.str().c_str(), loop_match_img2);
+						<< old_index << "-" << loop_fusion << ".jpg";
+					cv::imwrite(convert.str().c_str(), loop_match_img);
 				}
 
 			}
-			//release memory
+
 			cur_kf->image.release();
 			global_frame_cnt++;
-			//cout << "---------keyframe_database.size():" << keyframe_database.size() << endl;
-			if (t_loop > 1000 || keyframe_database.size() > MAX_KEYFRAME_NUM)
+
+			// 当关键帧数据库比较大时，此时需要对关键帧数据库进行下采样以满足实时需求
+			if (t_loop_detect_spend > 1000 || keyframe_database.size() > MAX_KEYFRAME_NUM)
 			{
 				m_keyframedatabase_resample.lock();
 				erase_index.clear();
 				keyframe_database.downsample(erase_index);
 				m_keyframedatabase_resample.unlock();
-				if (!erase_index.empty())
+				if (!erase_index.empty()) {
 					loop_closure->eraseIndex(erase_index);
+				}
 			}
 		}
-		std::chrono::milliseconds dura(10);
-		std::this_thread::sleep_for(dura);
-	}
+		//std::chrono::milliseconds dura(10);
+		//std::this_thread::sleep_for(dura);
+	//}
 }
 
-// 位姿图优化主线程
 void process_pose_graph()
 {
-    while(true)            
-    {
+    //while(true)            
+    //{
+		// 取最新的闭环信息进行闭环优化
         m_posegraph_buf.lock();
         int index = -1;
         while (!optimize_posegraph_buf.empty())
@@ -545,32 +522,35 @@ void process_pose_graph()
             optimize_posegraph_buf.pop();
         }
         m_posegraph_buf.unlock();
+
 		if (index != -1)
 		{
 			Eigen::Vector3d correct_t = Eigen::Vector3d::Zero();
 			Eigen::Matrix3d correct_r = Eigen::Matrix3d::Identity();
+
 			TicToc t_posegraph;
-			keyframe_database.optimize4DoFLoopPoseGraph(index,
-				correct_t,
-				correct_r);
-			console::print_value("T_PoseGrap: %dms\n", t_posegraph.toc());
+			keyframe_database.optimize4DoFLoopPoseGraph(index, correct_t, correct_r);
+			console::print_info("INFO: 4DoF loop pose graph optimized %d ms.\n", t_posegraph.toc());
+
 			m_loop_drift.lock();
 			relocalize_r = correct_r;
 			relocalize_t = correct_t;
 			m_loop_drift.unlock();
+
 			m_update_visualization.lock();
 			keyframe_database.updateVisualization();
 			//CameraPoseVisualization* posegraph_visualization = keyframe_database.getPosegraphVisualization();
 			m_update_visualization.unlock();
+
 			pubOdometry(estimator, cur_header, relocalize_t, relocalize_r);
 			//pubPoseGraph(posegraph_visualization, cur_header); 
 			nav_msgs::Path refine_path = keyframe_database.getPath();
 			updateLoopPath(refine_path);
 		}
 
-		std::chrono::milliseconds dura(5000);
-		std::this_thread::sleep_for(dura);
-    }
+		//std::chrono::milliseconds dura(50);
+		//std::this_thread::sleep_for(dura);
+    //}
 }
 
 // 视觉惯导里程计主线程
@@ -612,10 +592,9 @@ void process()
 			}
 			estimator.processImage(image, img_msg->header);
 
-			// 为闭环检测线程构造关键帧数据库
 			if (LOOP_CLOSURE)
 			{
-				// remove previous loop
+				// 移除之前的闭环信息
 				std::vector<RetriveData>::iterator it = estimator.retrive_data_vector.begin();
 				for (; it != estimator.retrive_data_vector.end(); )
 				{
@@ -626,6 +605,7 @@ void process()
 					else
 						it++;
 				}
+
 				m_retrive_data_buf.lock();
 				while (!retrive_data_buf.empty())
 				{
@@ -634,8 +614,9 @@ void process()
 					estimator.retrive_data_vector.push_back(tmp_retrive_data);
 				}
 				m_retrive_data_buf.unlock();
-				//WINDOW_SIZE - 2 is key frame
-				if (estimator.marginalization_flag == 0 && estimator.solver_flag == estimator.NON_LINEAR)
+
+				// 次新帧为关键帧时
+				if (estimator.marginalization_flag == estimator.MARGIN_OLD && estimator.solver_flag == estimator.NON_LINEAR)
 				{
 					Eigen::Vector3d vio_T_w_i = estimator.Ps[WINDOW_SIZE - 2];
 					Eigen::Matrix3d vio_R_w_i = estimator.Rs[WINDOW_SIZE - 2];
@@ -658,6 +639,7 @@ void process()
 					KeyFrame* keyframe = new KeyFrame(estimator.Headers[WINDOW_SIZE - 2].stamp.toSec(), vio_T_w_i, vio_R_w_i, cur_T, cur_R, image_buf.front().first, pattern_file, relocalize_t, relocalize_r);
 					keyframe->setExtrinsic(estimator.tic[0], estimator.ric[0]);
 					keyframe->buildKeyFrameFeatures(estimator, m_camera);
+
 					m_keyframe_buf.lock();
 					keyframe_buf.push(keyframe);
 					m_keyframe_buf.unlock();
@@ -668,9 +650,9 @@ void process()
 						if (estimator.Headers[0].stamp.toSec() == estimator.retrive_data_vector[0].header)
 						{
 							KeyFrame* cur_kf = keyframe_database.getKeyframe(estimator.retrive_data_vector[0].cur_index);
-							if (abs(estimator.retrive_data_vector[0].relative_yaw) > 30.0 || estimator.retrive_data_vector[0].relative_t.norm() > 20.0)
+							if (std::abs(estimator.retrive_data_vector[0].relative_yaw) > 30.0 || estimator.retrive_data_vector[0].relative_t.norm() > 20.0)
 							{
-								console::print_info("Wrong Loop\n");
+								console::print_info("INFO: wrong loop.\n");
 								cur_kf->removeLoop();
 							}
 							else
@@ -678,6 +660,7 @@ void process()
 								cur_kf->updateLoopConnection(estimator.retrive_data_vector[0].relative_t,
 									estimator.retrive_data_vector[0].relative_q,
 									estimator.retrive_data_vector[0].relative_yaw);
+
 								m_posegraph_buf.lock();
 								optimize_posegraph_buf.push(estimator.retrive_data_vector[0].cur_index);
 								m_posegraph_buf.unlock();
@@ -693,6 +676,7 @@ void process()
 			std_msgs::Header header = img_msg->header;
 			header.frame_id = "world";
 			cur_header = header;
+
 			m_loop_drift.lock();
 			if (estimator.relocalize)
 			{
@@ -707,6 +691,7 @@ void process()
 			m_loop_drift.unlock();
 			//ROS_ERROR("end: %f, at %f", img_msg->header.stamp.toSec(), ros::Time::now().toSec());
 		}
+
         m_buf.lock();
         m_state.lock();
         if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
@@ -744,8 +729,6 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 		PUB_THIS_FRAME = false;
 	}
 
-	//cv_bridge::CvImageConstPtr ptr = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::MONO8);
-	//cv::Mat show_img = ptr->image;
 	TicToc t_r;
 	for (int i = 0; i < NUM_OF_CAM; i++)
 	{
@@ -1025,14 +1008,14 @@ int main(int argc, char **argv)
     //std::thread visualization_thread {visualization};
     //visualization_thread.detach();
 
-    //std::thread callback_thread([&](){
+    std::thread callback_thread([&](){
         for (ni = 0; ni < imageNum; ++ni)
         {
             double tframe = vTimeStamps[ni];   //timestamp
             uint32_t sec = tframe;
             uint32_t nsec = (tframe - sec)*1e9;
             nsec = (nsec / 1000) * 1000 + 500;
-            ros::Time image_timestamp = ros::Time(sec, nsec);
+			ros::Time image_timestamp = ros::Time(sec, nsec);
 
             // 读取IMU数据以及对应的相机数据
             LoadImus(fImus, image_timestamp);
@@ -1048,6 +1031,8 @@ int main(int argc, char **argv)
 			console::print_value("img callback time: %dms\n", int(img_callback_time.toc()));
 
 			process();
+			process_loop_detection();
+			process_pose_graph();
 
             //wait to load the next frame image
             //double T = 0;
@@ -1061,19 +1046,10 @@ int main(int argc, char **argv)
             //else
             //	cerr << endl << "process image speed too slow, larger than interval time between two consecutive frames" << endl;
         }
-    // });
-    //callback_thread.detach();
+	});
+    callback_thread.detach();
 
-    visualization();
-
-	/*running_flag = false;
-	while (!view_done) {
-#ifdef _WIN_
-        Sleep(5);
-#elif _OSX_
-        sleep(5);
-#endif
-    }*/
+	visualization();
 
 	return 0;
 }

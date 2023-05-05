@@ -22,9 +22,7 @@ void LoopClosure::initCameraModel(const std::string &calib_file)
 }
 
 bool LoopClosure::startLoopClosure(std::vector<cv::KeyPoint> &keys, std::vector<BRIEF::bitset> &descriptors,
-	std::vector<cv::Point2f> &cur_pts,
-	std::vector<cv::Point2f> &old_pts,
-	int &old_index)
+	std::vector<cv::Point2f> &cur_pts, std::vector<cv::Point2f> &old_pts, int &old_index)
 {
 	try
 	{

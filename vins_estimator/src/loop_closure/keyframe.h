@@ -15,7 +15,6 @@
 #include <mutex>
 #include "loop_closure.h"
 
-// This functor extracts BRIEF descriptors in the required format
 class BriefExtractor : public FeatureExtractor<FBrief::TDescriptor>
 {
 public:
@@ -33,7 +32,8 @@ class KeyFrame
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 		KeyFrame(double _header, Eigen::Vector3d _vio_T_w_c, Eigen::Matrix3d _vio_R_w_c,
-			Eigen::Vector3d _cur_T_w_c, Eigen::Matrix3d _cur_R_w_c, cv::Mat &_image, const char *_brief_pattern_file, Eigen::Vector3d _relocalize_t, Eigen::Matrix3d _relocalize_r);
+			Eigen::Vector3d _cur_T_w_c, Eigen::Matrix3d _cur_R_w_c, cv::Mat &_image,
+			const char *_brief_pattern_file, Eigen::Vector3d _relocalize_t, Eigen::Matrix3d _relocalize_r);
 	void setExtrinsic(Eigen::Vector3d T, Eigen::Matrix3d R);
 	void FundmantalMatrixRANSAC(std::vector<cv::Point2f> &measurements_old, std::vector<cv::Point2f> &measurements_old_norm,
 		const camodocal::CameraPtr &m_camera);
@@ -71,6 +71,7 @@ public:
 
 	void getPose(Eigen::Vector3d &_T_w_i, Eigen::Matrix3d &_R_w_i);
 
+	// 获取前端里程计pose
 	void getOriginPose(Eigen::Vector3d &_T_w_i, Eigen::Matrix3d &_R_w_i);
 
 	void addConnection(int index, KeyFrame* connected_kf);
@@ -98,9 +99,8 @@ public:
 	std::vector<cv::Point2f> pts_normalize;
 	//feature ID
 	std::vector<int> features_id, features_id_matched;
-	//feature descriptor
+
 	std::vector<BRIEF::bitset> descriptors;
-	//keypoints
 	std::vector<cv::KeyPoint> keypoints;
 
 	//solomon add for point cloud(world)
@@ -112,7 +112,7 @@ public:
 	Eigen::Matrix3d qic;
 	Eigen::Vector3d tic;
 	int COL, ROW;
-	bool use_retrive;
+	bool retrive;
 
 	bool has_loop;
 	int loop_index;
@@ -135,6 +135,6 @@ private:
 	std::mutex mLoopInfo;
 	std::vector<cv::KeyPoint> window_keypoints;
 	std::vector<BRIEF::bitset> window_descriptors;
-	Eigen::Matrix<double, 8, 1 > loop_info;
+	Eigen::Matrix<double, 8, 1> loop_info;
 };
 #endif

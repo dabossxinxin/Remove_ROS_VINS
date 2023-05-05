@@ -1007,7 +1007,6 @@ int main(int argc, char **argv)
 	}
 
 	m_camera = CameraFactory::instance()->generateCameraFromYamlFile(CAM_NAMES_ESTIMATOR);
-<<<<<<< Updated upstream
 	std::thread measurement_process{ process };
 	measurement_process.detach();
 
@@ -1023,8 +1022,6 @@ int main(int argc, char **argv)
 		//loop_detection.join();
 		//pose_graph.join();
 	}
-=======
->>>>>>> Stashed changes
 
     //std::thread visualization_thread {visualization};
     //visualization_thread.detach();
@@ -1051,7 +1048,6 @@ int main(int argc, char **argv)
 		double timeSpent = img_callback_time.toc();
 		console::print_value("img callback time: %dms\n", int(timeSpent));
 
-<<<<<<< Updated upstream
 		Sleep(200);
 		//wait to load the next frame image
 		//double T = 0;
@@ -1064,16 +1060,6 @@ int main(int argc, char **argv)
 		//	Sleep((T - timeSpent)); //sec->us:1e6
 		//else
 		//	std::cerr << std::endl << "process image speed too slow, larger than interval time between two consecutive frames" << std::endl;
-=======
-		process();
-
-		if (LOOP_CLOSURE)
-		{
-			process_loop_detection();
-			process_pose_graph();
-			visualization();
-		}
->>>>>>> Stashed changes
 	}
 
 	running_flag = false;
@@ -1081,11 +1067,7 @@ int main(int argc, char **argv)
 #ifdef _WIN_
 		Sleep(5);
 #elif _OSX_
-<<<<<<< Updated upstream
         sleep(5);   
-=======
-		sleep(5);
->>>>>>> Stashed changes
 #endif
 	}
 

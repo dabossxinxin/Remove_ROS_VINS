@@ -6,23 +6,27 @@
 #include <assert.h>
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
-//#include "../utility/CameraPoseVisualization.h"
 #include "../utility/utility.h"
-//#include <nav_msgs/Path.h>
-//#include <nav_msgs/Odometry.h>
-//#include <geometry_msgs/PointStamped.h>
+#include "../utility/print.h"
 #include "../../include/Path.h"
 #include "../../include/Odometry.h"
 #include "../../include/PointStamped"
+
+//#include <nav_msgs/Path.h>
+//#include <nav_msgs/Odometry.h>
+//#include <geometry_msgs/PointStamped.h>
+//#include "../utility/CameraPoseVisualization.h"
 
 class KeyFrameDatabase
 {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	KeyFrameDatabase();
+
 	void add(KeyFrame* pKF);
-	void downsample(std::vector<int> &erase_index);
 	void erase(KeyFrame* pKF);
+	void downsample(std::vector<int> &erase_index);
+	
 	int size();
 	void optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d &loop_correct_t, Eigen::Matrix3d &loop_correct_r);
 	KeyFrame* getKeyframe(int index);
@@ -32,6 +36,8 @@ public:
 	void updateVisualization();
 	void addLoop(int loop_index);
 	nav_msgs::Path getPath();
+
+	// 可视化关键帧数据库中的关键帧与路标点
 	void viewPointClouds();
 	void viewPath();
 
@@ -43,13 +49,18 @@ private:
 	std::mutex mOptimiazationPosegraph;
 	std::mutex mPath;
 	std::mutex mPosegraphVisualization;
+
 	int earliest_loop_index;
+
 	Eigen::Vector3d t_drift;
-	double yaw_drift;
 	Eigen::Matrix3d r_drift;
+
+	double yaw_drift;
 	double total_length;
+
 	Eigen::Vector3d last_P;
 	nav_msgs::Path refine_path;
+
 	//CameraPoseVisualization* posegraph_visualization;
 };
 

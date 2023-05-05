@@ -1,64 +1,62 @@
 #include "keyframe_database.h"
 #include <pangolin/pangolin.h>
+
 KeyFrameDatabase::KeyFrameDatabase()
 {
-//	posegraph_visualization = new CameraPoseVisualization(0.0, 0.0, 1.0, 1.0);
-//	posegraph_visualization->setScale(0.1);
- //   posegraph_visualization->setLineWidth(0.01);
-    earliest_loop_index = -1;
+    //posegraph_visualization = new CameraPoseVisualization(0.0, 0.0, 1.0, 1.0);
+    //posegraph_visualization->setScale(0.1);
+    //posegraph_visualization->setLineWidth(0.01);
+	yaw_drift = 0;
+	total_length = 0;
+	earliest_loop_index = -1;
+	last_P = Eigen::Vector3d(0, 0, 0);
     t_drift = Eigen::Vector3d(0, 0, 0);
-    yaw_drift = 0;
-    r_drift = Eigen::Matrix3d::Identity();
-    total_length = 0;
-    last_P = Eigen::Vector3d(0, 0, 0);
+	r_drift = Eigen::Matrix3d::Identity();
 }
 
 void KeyFrameDatabase::viewPointClouds()
 {
-	std::list<KeyFrame*>::iterator iterator_keyframe;
-	for (iterator_keyframe = keyFrameList.begin(); iterator_keyframe != keyFrameList.end(); iterator_keyframe++)
+	//std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
+	GLfloat size = 1.0;
+	for (auto keyframe = keyFrameList.begin(); keyframe != keyFrameList.end(); ++keyframe)
 	{
-		//	glPushMatrix();
-		glPointSize(1); //设备被渲染点的宽度，以像素位单位，默认为1
-		glBegin(GL_POINTS);      //把每一个顶点当做一个独立的点进行处理
-		//glColor3f(0.0,0.0,0.0);  //点的颜色为黑色
-		glColor3f(1.0, 1.0, 1.0);  //点的颜色为白色
-	/*	cout << "relocalize_r:" << (*iterator_keyframe)->relocalize_r(0,0) << " " << (*iterator_keyframe)->relocalize_r(0,1) << " " << (*iterator_keyframe)->relocalize_r(0,2) << endl
-								<< (*iterator_keyframe)->relocalize_r(1,0) << " " << (*iterator_keyframe)->relocalize_r(1,1) << " " << (*iterator_keyframe)->relocalize_r(1,2) << endl
-								<< (*iterator_keyframe)->relocalize_r(2,0) << " " << (*iterator_keyframe)->relocalize_r(2,1) << " " << (*iterator_keyframe)->relocalize_r(2,2) << endl;
-		cout << "relocalize_t:" << (*iterator_keyframe)->relocalize_t(0) << " " << (*iterator_keyframe)->relocalize_t(1) << " " << (*iterator_keyframe)->relocalize_t(2) << endl;
-	*/
-		for (auto it = (*iterator_keyframe)->point_clouds.begin(); it != (*iterator_keyframe)->point_clouds.end(); it++)
+		glPointSize(size);			// 路标点显示大小
+		glBegin(GL_POINTS);			// 把每一个顶点当做一个独立的点进行处理
+		glColor3f(1.0, 1.0, 1.0);	// 点的颜色为白色
+	
+		for (auto point = (*keyframe)->point_clouds.begin(); point != (*keyframe)->point_clouds.end(); ++point)
 		{
-			Eigen::Vector3d pointCloudWorld;
-			pointCloudWorld = (*iterator_keyframe)->relocalize_r * (*it) + (*iterator_keyframe)->relocalize_t;
-			glVertex3f((float)(pointCloudWorld.x()), (float)(pointCloudWorld.y()), (float)(pointCloudWorld.z()));
+			Eigen::Vector3d point_world = (*keyframe)->relocalize_r * (*point) + (*keyframe)->relocalize_t;
+			glVertex3f((float)(point_world.x()), (float)(point_world.y()), (float)(point_world.z()));
 		}
 		glEnd();
-		//	glPopMatrix();
 	}
 }
+
 void KeyFrameDatabase::viewPath()
 {
+	//std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
+	GLfloat line_width = 1.2;
 	Eigen::Vector3d tmp_path;
 	glColor3f(1.0f, 0.0f, 0.0f);
-	glLineWidth(2);
+	glLineWidth(line_width);
 	glBegin(GL_LINE_STRIP);
-
-	std::list<KeyFrame*>::iterator iterator_keyframe;
-	for(iterator_keyframe = keyFrameList.begin(); iterator_keyframe != keyFrameList.end(); iterator_keyframe++)
+	
+	for(auto it = keyFrameList.begin(); it != keyFrameList.end(); ++it)
 	{
-		(*iterator_keyframe)->getPath(tmp_path);
+		(*it)->getPath(tmp_path);
 		glVertex3f(tmp_path.x(), tmp_path.y(), tmp_path.z());
 	}
 	glEnd();
 }
+
 void KeyFrameDatabase::add(KeyFrame* pKF)
 {
-	//ROS_DEBUG("add keyframe begin!");
+	console::print_info("INFO: add keyframe begin.\n");
 	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
 	keyFrameList.push_back(pKF);
 	lock.unlock();
+
 	Eigen::Vector3d P;
 	Eigen::Matrix3d R;
 	pKF->getPose(P, R);
@@ -67,11 +65,11 @@ void KeyFrameDatabase::add(KeyFrame* pKF)
 
 	total_length += (P - last_P).norm();
 	last_P = P;
-	//posegraph_visualization->add_pose(P, Q);
-/*
+
 	//draw local connection
-	list<KeyFrame*>::reverse_iterator rit = keyFrameList.rbegin();
-	list<KeyFrame*>::reverse_iterator lrit;
+	/*posegraph_visualization->add_pose(P, Q);
+	std::list<KeyFrame*>::reverse_iterator rit = keyFrameList.rbegin();
+	std::list<KeyFrame*>::reverse_iterator lrit;
 	for (; rit != keyFrameList.rend(); rit++)  
     {  
         if ((*rit) == pKF)
@@ -82,16 +80,16 @@ void KeyFrameDatabase::add(KeyFrame* pKF)
         	{
         		if (lrit == keyFrameList.rend())
         			break;
-        		Vector3d conncected_P;
-        		Matrix3d connected_R;
+        		Eigen::Vector3d conncected_P;
+        		Eigen::Matrix3d connected_R;
         		(*lrit)->getPose(conncected_P, connected_R);
         		posegraph_visualization->add_edge(P, conncected_P);
         		lrit++;
         	}
         	break;
         }
-    } 
-*/
+    } */
+
 	// add key frame to path for visualization
 	nav_msgs::Odometry odometry;
 	odometry.header.stamp = ros::Time(pKF->header);
@@ -108,24 +106,23 @@ void KeyFrameDatabase::add(KeyFrame* pKF)
 	pose_stamped.header = odometry.header;
 	pose_stamped.pose = odometry.pose.pose;
 
-	//unique_lock<mutex> mlockPath(mPath);
-	//refine_path.header = odometry.header;
-	//refine_path.poses.push_back(pose_stamped);
-	//mlockPath.unlock();
-	
-//	ROS_DEBUG("add keyframe end!");
-
+	// TODO: 这里要不要加上目前存疑
+	/*std::unique_lock<std::mutex> mPath(mPath);
+	refine_path.header = odometry.header;
+	refine_path.poses.push_back(pose_stamped);
+	mPath.unlock();*/
+	console::print_info("INFO: add keyframe end.\n");
 }
 
 void KeyFrameDatabase::downsample(std::vector<int> &erase_index)
 {
-//	ROS_DEBUG("resample keyframe begin!");
+	console::print_info("INFO: resample keyframe begin.\n");
 	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
-	int frame_num = (int)keyFrameList.size();
+	int keyframe_num = (int)keyFrameList.size();
 	if (mOptimiazationPosegraph.try_lock())
 	{
 		erase_index.clear();
-		double min_dis = total_length / (frame_num * 0.7);
+		double min_dis = total_length / (keyframe_num * 0.7);
 
 		std::list<KeyFrame*>::iterator it = keyFrameList.begin();
 		Eigen::Vector3d last_P = Eigen::Vector3d(0, 0, 0);
@@ -135,6 +132,8 @@ void KeyFrameDatabase::downsample(std::vector<int> &erase_index)
 			Eigen::Matrix3d tmp_r;
 			(*it)->getPose(tmp_t, tmp_r);
 			double dis = (tmp_t - last_P).norm();
+
+			// 关键帧中的第一帧/运动距离大于最小距离/当前帧存在闭环
 		    if(it == keyFrameList.begin() || dis > min_dis || (*it)->has_loop || (*it)->is_looped)
 		    {
 		    	last_P = tmp_t;
@@ -142,26 +141,32 @@ void KeyFrameDatabase::downsample(std::vector<int> &erase_index)
 		    }
 		    else
 		    {
-		    	erase_index.push_back((*it)->global_index);
-		    	delete (*it);
-		    	it = keyFrameList.erase(it);
+				erase_index.push_back((*it)->global_index);
+				delete (*it);
+				it = keyFrameList.erase(it);
 		    }
 		}
 		mOptimiazationPosegraph.unlock();
 	}
-	else
+	else 
+	{
 		return;
+	}
 
 	lock.unlock();
-	//ROS_DEBUG("resample keyframe end!");
+	console::print_info("INFO: resample keyframe end.\n");
 }
 
 void KeyFrameDatabase::erase(KeyFrame* pKF)
 {
-	std::list<KeyFrame*>::iterator it = std::find(keyFrameList.begin(), keyFrameList.end(), pKF);
-	assert(it != keyFrameList.end());
-	if (it != keyFrameList.end())
-	    keyFrameList.erase(it);
+	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
+	std::list<KeyFrame*>::iterator it = 
+		std::find(keyFrameList.begin(), keyFrameList.end(), pKF);
+
+	if (it != keyFrameList.end()) 
+	{
+		keyFrameList.erase(it);
+	}    
 }
 
 int KeyFrameDatabase::size()
@@ -187,44 +192,52 @@ KeyFrame* KeyFrameDatabase::getKeyframe(int index)
 	std::list<KeyFrame*>::iterator it = keyFrameList.begin();
 	for (; it != keyFrameList.end(); it++)   
 	{
-	    if((*it)->global_index == index)
-	    	break;
+		if ((*it)->global_index == index) {
+			break;
+		}
 	}
-	if (it != keyFrameList.end())
-    	return *it;
-    else
-    	return NULL;
+	if (it != keyFrameList.end()) {
+		return *it;
+	}
+	else {
+		return NULL;
+	}
 }
 
 KeyFrame* KeyFrameDatabase::getLastKeyframe()
 {
 	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
 	std::list<KeyFrame*>::reverse_iterator rit = keyFrameList.rbegin();
-	assert(rit != keyFrameList.rend());
-    return *rit;
+	if (rit != keyFrameList.rend()) {
+		return *rit;
+	}
+	else {
+		return NULL;
+	}
 }
 
 KeyFrame* KeyFrameDatabase::getLastKeyframe(int last_index)
 {
 	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
 	std::list<KeyFrame*>::reverse_iterator rit = keyFrameList.rbegin();
-	for (int i = 0; i < last_index; i++)  
-    {  
-        rit++;
-        assert(rit != keyFrameList.rend());
-    } 
-    return *rit;
+	for (int i = 0; i < last_index; ++i) {
+		rit++;
+		if (rit == keyFrameList.rend()) {
+			return NULL;
+		}
+	}
+	return *rit;
 }
 
 void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d &loop_correct_t, Eigen::Matrix3d &loop_correct_r)
 {
-	//ROS_DEBUG("optimizae pose graph begin!");
+	console::print_info("INFO: optimize pose graph begin.\n");
 	std::unique_lock<std::mutex> lock(mOptimiazationPosegraph);
 	KeyFrame* cur_kf = getKeyframe(cur_index);
 	int loop_index = cur_kf->loop_index;
 	if (earliest_loop_index > loop_index || earliest_loop_index == -1)
 		earliest_loop_index = loop_index;
-	assert(cur_kf-> update_loop_info == 1);
+	assert(cur_kf->update_loop_info == 1);
 	int max_length = cur_index + 1;
 
 	// w^t_i   w^q_i
@@ -243,15 +256,15 @@ void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d 
 	loss_function = new ceres::HuberLoss(1.0);
 	//loss_function = new ceres::CauchyLoss(1.0);
 	ceres::LocalParameterization* angle_local_parameterization =
-	    AngleLocalParameterization::Create();
-
-	std::list<KeyFrame*>::iterator it;
+		AngleLocalParameterization::Create();
 
 	int i = 0;
-	for (it = keyFrameList.begin(); it != keyFrameList.end(); it++)
+	for (auto it = keyFrameList.begin(); it != keyFrameList.end(); ++it)
 	{
-		if ((*it)->global_index < earliest_loop_index)
+		if ((*it)->global_index < earliest_loop_index) {
 			continue;
+		}
+
 		(*it)->resample_index = i;
 		Eigen::Quaterniond tmp_q;
 		Eigen::Matrix3d tmp_r;
@@ -272,12 +285,12 @@ void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d 
 		problem.AddParameterBlock(t_array[i].data(), 3);
 
 		if ((*it)->global_index == earliest_loop_index)
-		{	
+		{
 			problem.SetParameterBlockConstant(euler_array[i].data());
 			problem.SetParameterBlockConstant(t_array[i].data());
 		}
 
-		//add edge
+		// 添加关键帧每一帧与之前四帧之间的闭环残差
 		for (int j = 1; j < 5; j++)
 		{
 			if (i - j > 0)
@@ -288,31 +301,34 @@ void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d 
 				double relative_yaw = euler_array[i][0] - euler_array[i - j][0];
 				ceres::CostFunction* cost_function = FourDOFError::Create(relative_t.x(), relative_t.y(), relative_t.z(),
 					relative_yaw, euler_conncected.y(), euler_conncected.z());
-				problem.AddResidualBlock(cost_function, NULL, euler_array[i - j].data(),
+				problem.AddResidualBlock(cost_function, NULL,
+					euler_array[i - j].data(),
 					t_array[i - j].data(),
 					euler_array[i].data(),
 					t_array[i].data());
 			}
 		}
 
-		//add loop edge
+		// 添加当前帧与其对应闭环帧的残差
 		if ((*it)->update_loop_info)
 		{
 			int connected_index = getKeyframe((*it)->loop_index)->resample_index;
 			assert((*it)->loop_index >= earliest_loop_index);
 			Eigen::Vector3d euler_conncected = Utility::R2ypr(q_array[connected_index].toRotationMatrix());
-			Eigen::Vector3d relative_t;
-			relative_t = (*it)->getLoopRelativeT();
+			Eigen::Vector3d relative_t = (*it)->getLoopRelativeT();
 			double relative_yaw = (*it)->getLoopRelativeYaw();
 			ceres::CostFunction* cost_function = FourDOFWeightError::Create(relative_t.x(), relative_t.y(), relative_t.z(),
 				relative_yaw, euler_conncected.y(), euler_conncected.z());
-			problem.AddResidualBlock(cost_function, loss_function, euler_array[connected_index].data(),
+			problem.AddResidualBlock(cost_function, loss_function,
+				euler_array[connected_index].data(),
 				t_array[connected_index].data(),
 				euler_array[i].data(),
 				t_array[i].data());
 		}
-		if ((*it)->global_index == cur_index)
+
+		if ((*it)->global_index == cur_index) {
 			break;
+		}
 		i++;
 	}
 
@@ -320,18 +336,21 @@ void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d 
 	//std::cout << summary.BriefReport() << "\n";
 
 	i = 0;
-	for (it = keyFrameList.begin(); it != keyFrameList.end(); it++)
+	for (auto it = keyFrameList.begin(); it != keyFrameList.end(); it++)
 	{
-		if ((*it)->global_index < earliest_loop_index)
+		if ((*it)->global_index < earliest_loop_index) {
 			continue;
+		}
+
 		Eigen::Quaterniond tmp_q;
 		tmp_q = Utility::ypr2R(Eigen::Vector3d(euler_array[i][0], euler_array[i][1], euler_array[i][2]));
 		Eigen::Vector3d tmp_t = Eigen::Vector3d(t_array[i][0], t_array[i][1], t_array[i][2]);
 		Eigen::Matrix3d tmp_r = tmp_q.toRotationMatrix();
 		(*it)->updatePose(tmp_t, tmp_r);
 
-		if ((*it)->global_index == cur_index)
+		if ((*it)->global_index == cur_index) {
 			break;
+		}
 		i++;
 	}
 
@@ -343,7 +362,8 @@ void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d 
 	r_drift = Utility::ypr2R(Eigen::Vector3d(yaw_drift, 0, 0));
 	t_drift = cur_t - r_drift * origin_t;
 
-	for (; it != keyFrameList.end(); it++)
+	// TODO：使用当前闭环帧的drift对所有关键帧位姿进行矫正是否不妥
+	for (auto it = keyFrameList.begin(); it != keyFrameList.end(); ++it)
 	{
 		Eigen::Vector3d P;
 		Eigen::Matrix3d R;
@@ -354,25 +374,23 @@ void KeyFrameDatabase::optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d 
 	}
 	loop_correct_t = t_drift;
 	loop_correct_r = r_drift;
-	//ROS_DEBUG("optimizae pose graph end!");
-
+	console::print_info("INFO: optimize pose graph end.\n");
 }
 
 void KeyFrameDatabase::updateVisualization()
 {
-	//ROS_DEBUG("updateVisualization begin");
+	console::print_info("INFO: update visualization begin.\n");
 	std::unique_lock<std::mutex> mlockPath(mPath);
 	std::unique_lock<std::mutex> mlockPosegraph(mPosegraphVisualization);
 	total_length = 0;
 	last_P = Eigen::Vector3d(0, 0, 0);
 	//update visualization
 	std::list<KeyFrame*>::iterator it;
-//	posegraph_visualization->reset();
+    //posegraph_visualization->reset();
 	refine_path.poses.clear();
 
 	for (it = keyFrameList.begin(); it != keyFrameList.end(); it++)
 	{
-
 		Eigen::Vector3d P;
 		Eigen::Matrix3d R;
 		(*it)->getPose(P, R);
@@ -381,40 +399,35 @@ void KeyFrameDatabase::updateVisualization()
 
 		total_length += (P - last_P).norm();
 		last_P = P;
-		//posegraph_visualization->add_pose(P, Q);
-		/*
-		list<KeyFrame*>::iterator lit;
+
+		/*posegraph_visualization->add_pose(P, Q);
+		std::list<KeyFrame*>::iterator lit;
 		lit = it;
     	for (int i = 0; i < 4; i++)
     	{
     		if (lit == keyFrameList.begin())
     			break;
     		lit--;
-    		Vector3d conncected_P;
-    		Matrix3d connected_R;
+    		Eigen::Vector3d conncected_P;
+    		Eigen::Matrix3d connected_R;
     		(*lit)->getPose(conncected_P, connected_R);
     		posegraph_visualization->add_edge(P, conncected_P);
-    	}
-		*/
+    	}*/
+		
 		// draw loop edge
-
 		if ((*it)->update_loop_info)
 		{
-
 			KeyFrame* connected_KF = getKeyframe((*it)->loop_index);
 			Eigen::Vector3d conncected_P;
 			Eigen::Matrix3d connected_R;
 			connected_KF->getPose(conncected_P, connected_R);
-			//			posegraph_visualization->add_loopedge(P, conncected_P);
 
-						/*
-						//supposed edge
-						Vector3d supposed_P;
-						Vector3d relative_t;
-						relative_t = (*it)->getLoopRelativeT();
-						supposed_P = P - connected_R * relative_t;
-						posegraph_visualization->add_edge(P, supposed_P);
-						*/
+			/*posegraph_visualization->add_loopedge(P, conncected_P);
+			Eigen::Vector3d supposed_P;
+			Eigen::Vector3d relative_t;
+			relative_t = (*it)->getLoopRelativeT();
+			supposed_P = P - connected_R * relative_t;
+			posegraph_visualization->add_edge(P, supposed_P);*/	
 
 			std::list<KeyFrame*>::iterator lit;
 			lit = it;
@@ -422,7 +435,7 @@ void KeyFrameDatabase::updateVisualization()
 			Eigen::Vector3d P_previous;
 			Eigen::Matrix3d R_previous;
 			(*lit)->getPose(P_previous, R_previous);
-			//			posegraph_visualization->add_loopedge(P, P_previous);
+			//posegraph_visualization->add_loopedge(P, P_previous);
 		}
 
 		// add key frame to path for visualization
@@ -442,9 +455,8 @@ void KeyFrameDatabase::updateVisualization()
 		pose_stamped.pose = odometry.pose.pose;
 		refine_path.header = odometry.header;
 		refine_path.poses.push_back(pose_stamped);
-
 	}
-	//ROS_DEBUG("updateVisualization end");
+	console::print_info("update visualization end.\n");
 }
 
 void KeyFrameDatabase::addLoop(int loop_index)
@@ -459,7 +471,7 @@ void KeyFrameDatabase::addLoop(int loop_index)
 	Eigen::Matrix3d connected_R, R;
 	cur_KF->getPose(P, R);
 	connected_KF->getPose(conncected_P, connected_R);
-	//	posegraph_visualization->add_loopedge(P, conncected_P);
+	//posegraph_visualization->add_loopedge(P, conncected_P);
 }
 
 nav_msgs::Path KeyFrameDatabase::getPath()
@@ -468,10 +480,8 @@ nav_msgs::Path KeyFrameDatabase::getPath()
 	return refine_path;
 }
 
-/*
-CameraPoseVisualization* KeyFrameDatabase::getPosegraphVisualization()
-{
-	unique_lock<mutex> lock(mPosegraphVisualization);
-	return posegraph_visualization;
-}
-*/
+//CameraPoseVisualization* KeyFrameDatabase::getPosegraphVisualization()
+//{
+//	unique_lock<mutex> lock(mPosegraphVisualization);
+//	return posegraph_visualization;
+//}
