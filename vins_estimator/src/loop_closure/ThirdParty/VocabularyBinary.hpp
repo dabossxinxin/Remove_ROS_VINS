@@ -12,18 +12,31 @@
 #include <cstdint>
 #include <fstream>
 #include <string>
+#include <iostream>
 
 namespace VINSLoop {
 
 	struct Node {
+//		Node() {
+//			if (sizeof(ptrdiff_t) == 8) {
+//#define __SIZEOF_PTRDIFF_T__ 8
+//			}
+//			else if (sizeof(ptrdiff_t) == 4) {
+//#define __SIZEOF_PTRDIFF_T__ 4
+//			}
+//			else {
+//				std::cerr << "check system." << std::endl;
+//			}
+//		}
+
 		int32_t nodeId;
 		int32_t parentId;
 		double weight;
-#if (__SIZEOF_PTRDIFF_T__ == 8)
-		uint64_t descriptor[4];
-#elif (__SIZEOF_PTRDIFF_T__ == 4)
+//#if (__SIZEOF_PTRDIFF_T__ == 8)
+//		uint64_t descriptor[4];
+//#elif (__SIZEOF_PTRDIFF_T__ == 4)
 		uint32_t descriptor[8];
-#endif
+//#endif
 		//uint8_t descriptor[32]; //solomon modified for debug 32 bit system compatibility issue(boost::dynamic_bitset size()!= rhs.size() issue)
 	};
 

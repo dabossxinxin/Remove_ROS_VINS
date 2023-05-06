@@ -170,14 +170,41 @@ void visualization()
 	float mViewpointY = -5;
 	float mViewpointZ = -10;
 	float mViewpointF = 500;
+	int panelPix = 175;
 	pangolin::CreateWindowAndBind("VINS: Map Visualization",1024,768);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-	pangolin::CreatePanel("menu").SetBounds(0.0,1.0,0.0,pangolin::Attach::Pix(175));
+	pangolin::CreatePanel("menu").SetBounds(0.0, 1.0, 0.0, float(300.0 / 1024.0));
  	pangolin::Var<bool> menuFollowCamera("menu.Follow Camera", true, true);
  	pangolin::Var<bool> menuShowPoints("menu.Show Points", true, true);
  	pangolin::Var<bool> menuShowPath("menu.Show Path", true, true);
+
+	// 添加外参曲线图
+	pangolin::DataLog logTic;
+	std::vector<std::string> labelTic;
+	labelTic.push_back(std::string("Tic.x"));
+	labelTic.push_back(std::string("Tic.y"));
+	labelTic.push_back(std::string("Tic.z"));
+	logTic.SetLabels(labelTic);
+
+	pangolin::DataLog logRic;
+	std::vector<std::string> labelRic;
+	labelRic.push_back(std::string("yaw"));
+	labelRic.push_back(std::string("pitch"));
+	labelRic.push_back(std::string("roll"));
+	logRic.SetLabels(labelRic);
+
+	pangolin::Plotter plotterRic(&logRic, 0.0f, 100.0f, -0.02f, 0.02f, 10.0f, 0.001f);
+	plotterRic.SetBounds(float(240.0 / 768.0), float(440.0 / 768.0), float(10.0 / 1024.0), float(290.0 / 1024.0));
+	plotterRic.Track("$i");
+
+	pangolin::Plotter plotterTic(&logTic, 0.0f, 100.0f, -0.02f, 0.02f, 10.0f, 0.001f);
+	plotterTic.SetBounds(float(20.0 / 768.0), float(220.0 / 768.0), float(10.0 / 1024.0), float(290.0 / 1024.0));
+	plotterTic.Track("$i");
+	
+	pangolin::DisplayBase().AddDisplay(plotterRic);
+	pangolin::DisplayBase().AddDisplay(plotterTic);
 
    	// Define Camera Render Object (for view / scene browsing)
 	pangolin::OpenGlRenderState s_cam(
@@ -187,19 +214,29 @@ void visualization()
 
 	// Add named OpenGL viewport to window and provide 3D Handler
 	pangolin::View& d_cam = pangolin::CreateDisplay()
-		.SetBounds(0.0, 1.0, pangolin::Attach::Pix(175), 1.0, -1024.0f / 768.0f)
+		.SetBounds(0.0, 1.0, float(300.0 / 1024.0), 1.0, -1024.0f / 768.0f)
 		.SetHandler(new pangolin::Handler3D(s_cam));
 	
 	pangolin::OpenGlMatrix Twc;
+	Eigen::Vector3d tic;
+	Eigen::Vector3d ypr;
 	Twc.SetIdentity();
+
 	while (!pangolin::ShouldQuit() & running_flag)
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		ViewCameraPose(relocalize_t, relocalize_r, Twc);
+		glClearColor(0.0f, 0.0f, 0.0f, 0.5f);
+		
+		if (keyframe_database.viewNewestKeyFrameEx(ypr, tic))
+		{
+			logRic.Log(ypr(0), ypr(1), ypr(2));
+			logTic.Log(tic(0), tic(1), tic(2));
+		}
+
 		if (menuFollowCamera)
 			s_cam.Follow(Twc);
 		d_cam.Activate(s_cam);
-		glClearColor(0.0f, 0.0f, 0.0f, 0.5f); //背景色设置为白色
 		DrawCurrentCamera(Twc);
 		if (menuShowPoints)
 			keyframe_database.viewPointClouds();

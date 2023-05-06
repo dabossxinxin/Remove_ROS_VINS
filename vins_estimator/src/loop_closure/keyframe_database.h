@@ -40,6 +40,7 @@ public:
 	// 可视化关键帧数据库中的关键帧与路标点
 	void viewPointClouds();
 	void viewPath();
+	bool viewNewestKeyFrameEx(Eigen::Vector3d& ypr, Eigen::Vector3d& tic);
 
 	//CameraPoseVisualization* getPosegraphVisualization();
 	
@@ -51,6 +52,7 @@ private:
 	std::mutex mPosegraphVisualization;
 
 	int earliest_loop_index;
+	int newest_keyframe_index;
 
 	Eigen::Vector3d t_drift;
 	Eigen::Matrix3d r_drift;

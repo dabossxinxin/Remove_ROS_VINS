@@ -9,9 +9,30 @@ KeyFrameDatabase::KeyFrameDatabase()
 	yaw_drift = 0;
 	total_length = 0;
 	earliest_loop_index = -1;
+	newest_keyframe_index = -1;
 	last_P = Eigen::Vector3d(0, 0, 0);
     t_drift = Eigen::Vector3d(0, 0, 0);
 	r_drift = Eigen::Matrix3d::Identity();
+}
+
+bool KeyFrameDatabase::viewNewestKeyFrameEx(Eigen::Vector3d& ypr, Eigen::Vector3d& tic)
+{
+	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
+	if (!keyFrameList.empty()) {
+		KeyFrame* newestKeyFrame = keyFrameList.back();
+		if (newest_keyframe_index == -1 || newest_keyframe_index != newestKeyFrame->global_index) {
+			tic = newestKeyFrame->tic;
+			ypr = Utility::R2ypr(newestKeyFrame->qic);
+			newest_keyframe_index = newestKeyFrame->global_index;
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	else {
+		return false;
+	}
 }
 
 void KeyFrameDatabase::viewPointClouds()
