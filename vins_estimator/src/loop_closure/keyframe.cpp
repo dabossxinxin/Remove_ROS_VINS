@@ -33,7 +33,9 @@ KeyFrame::KeyFrame(double _header, Eigen::Vector3d _vio_T_w_i, Eigen::Matrix3d _
 	update_loop_info = 0;
 	vio_T_w_i = _vio_T_w_i;
 	vio_R_w_i = _vio_R_w_i;
-	relocalize_t = _relocalize_t; // solomon add for draw point cloud 
+
+	// 用于在显示窗体中绘制路标点信息
+	relocalize_t = _relocalize_t; 
 	relocalize_r = _relocalize_r;
 }
 
@@ -60,11 +62,11 @@ void KeyFrame::buildKeyFrameFeatures(Estimator &estimator, const camodocal::Came
 	for (auto &it_per_id : estimator.f_manager.feature)
 	{
 		it_per_id.used_num = it_per_id.feature_per_frame.size();
-
-		int frame_size = it_per_id.feature_per_frame.size();
-		if (it_per_id.start_frame <= WINDOW_SIZE - 2 && it_per_id.endFrame() >= WINDOW_SIZE - 2)
+		if (it_per_id.start_frame <= WINDOW_SIZE - 2 && it_per_id.used_num > 5 && it_per_id.solve_flag == 1 && 
+			it_per_id.estimated_depth > 0.1 && it_per_id.estimated_depth < 10)
 		{
-			Eigen::Vector3d point = it_per_id.feature_per_frame[WINDOW_SIZE - 2 - it_per_id.start_frame].point;
+			//Eigen::Vector3d point = it_per_id.feature_per_frame[WINDOW_SIZE - 2 - it_per_id.start_frame].point;
+			Eigen::Vector3d point = it_per_id.feature_per_frame[0].point;
 			Eigen::Vector2d point_uv;
 			m_camera->spaceToPlane(point, point_uv);
 			measurements.push_back(cv::Point2f(point_uv.x(), point_uv.y()));

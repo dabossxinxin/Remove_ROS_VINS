@@ -916,7 +916,8 @@ void TemplatedVocabulary<TDescriptor, F>::createWords()
 
 	if (!m_nodes.empty())
 	{
-		m_words.reserve((int)pow((double)m_k, (double)m_L));
+		// TODO£ºÔÝÊ±×¢ÊÍµôreserve
+		//m_words.reserve((int)pow((double)m_k, (double)m_L));
 
 		typename std::vector<Node>::iterator nit;
 

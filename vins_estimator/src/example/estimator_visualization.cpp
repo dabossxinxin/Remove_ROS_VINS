@@ -647,9 +647,8 @@ void process()
 				m_retrive_data_buf.lock();
 				while (!retrive_data_buf.empty())
 				{
-					RetriveData tmp_retrive_data = retrive_data_buf.front();
+					estimator.retrive_data_vector.push_back(retrive_data_buf.front());
 					retrive_data_buf.pop();
-					estimator.retrive_data_vector.push_back(tmp_retrive_data);
 				}
 				m_retrive_data_buf.unlock();
 
@@ -664,11 +663,11 @@ void process()
 						image_buf.pop();
 					}
 					i_buf.unlock();
-					//assert(estimator.Headers[WINDOW_SIZE - 1].stamp.toSec() == image_buf.front().second);
-					//elative_T   i-1_T_i relative_R  i-1_R_i
+
 					cv::Mat KeyFrame_image;
 					KeyFrame_image = image_buf.front().first;
 
+					// 使用滑窗中的次新帧构造关键帧，包含次新帧的前端位姿，之前的回环信息以及回环纠正后的位姿
 					const char *pattern_file = PATTERN_FILE.c_str();
 					Eigen::Vector3d cur_T;
 					Eigen::Matrix3d cur_R;
@@ -682,7 +681,7 @@ void process()
 					keyframe_buf.push(keyframe);
 					m_keyframe_buf.unlock();
 
-					// 更新闭环信息
+					// 填充optimize_posegraph_buf数据，为位姿图优化提供数据来源
 					if (!estimator.retrive_data_vector.empty() && estimator.retrive_data_vector[0].relative_pose)
 					{
 						if (estimator.Headers[0].stamp.toSec() == estimator.retrive_data_vector[0].header)

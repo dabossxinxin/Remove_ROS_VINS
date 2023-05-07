@@ -41,9 +41,9 @@ void KeyFrameDatabase::viewPointClouds()
 	GLfloat size = 1.0;
 	for (auto keyframe = keyFrameList.begin(); keyframe != keyFrameList.end(); ++keyframe)
 	{
-		glPointSize(size);			// 路标点显示大小
-		glBegin(GL_POINTS);			// 把每一个顶点当做一个独立的点进行处理
-		glColor3f(1.0, 1.0, 1.0);	// 点的颜色为白色
+		glPointSize(size);
+		glBegin(GL_POINTS);
+		glColor3f(1.0, 1.0, 1.0);
 	
 		for (auto point = (*keyframe)->point_clouds.begin(); point != (*keyframe)->point_clouds.end(); ++point)
 		{

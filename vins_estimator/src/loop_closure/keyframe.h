@@ -32,14 +32,15 @@ class KeyFrame
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 		KeyFrame(double _header, Eigen::Vector3d _vio_T_w_c, Eigen::Matrix3d _vio_R_w_c,
-			Eigen::Vector3d _cur_T_w_c, Eigen::Matrix3d _cur_R_w_c, cv::Mat &_image,
-			const char *_brief_pattern_file, Eigen::Vector3d _relocalize_t, Eigen::Matrix3d _relocalize_r);
+			Eigen::Vector3d _cur_T_w_c, Eigen::Matrix3d _cur_R_w_c, cv::Mat &_image, const char *_brief_pattern_file,
+			Eigen::Vector3d _relocalize_t, Eigen::Matrix3d _relocalize_r);
 	void setExtrinsic(Eigen::Vector3d T, Eigen::Matrix3d R);
 	void FundmantalMatrixRANSAC(std::vector<cv::Point2f> &measurements_old, std::vector<cv::Point2f> &measurements_old_norm,
 		const camodocal::CameraPtr &m_camera);
 
 	void extractBrief(cv::Mat &image);
 
+	// 将前端estimator中管理的特征点加入到关键帧中
 	void buildKeyFrameFeatures(Estimator &estimator, const camodocal::CameraPtr &m_camera);
 
 	bool inAera(cv::Point2f pt, cv::Point2f center, float area_size);
@@ -65,10 +66,13 @@ public:
 		std::vector<cv::Point2f> &measurements_old_norm,
 		Eigen::Vector3d &PnP_T_old, Eigen::Matrix3d &PnP_R_old);
 
+	// 更新闭环校正后的pose
 	void updatePose(const Eigen::Vector3d &_T_w_i, const Eigen::Matrix3d &_R_w_i);
 
+	// 更新前端里程计pose
 	void updateOriginPose(const Eigen::Vector3d &_T_w_i, const Eigen::Matrix3d &_R_w_i);
 
+	// 获取闭环矫正后的pose
 	void getPose(Eigen::Vector3d &_T_w_i, Eigen::Matrix3d &_R_w_i);
 
 	// 获取前端里程计pose
@@ -91,50 +95,50 @@ public:
 
 	double getLoopRelativeYaw();
 
-	double header;
-	std::vector<Eigen::Vector3d> point_clouds, point_clouds_matched;
+	double			header;					// 当前关键帧时间戳
+	int				global_index;			// 当前帧全局索引
+	cv::Mat			image;					// 当前帧对应图像
+	Eigen::Matrix3d qic;					// 当前帧旋转外参
+	Eigen::Vector3d tic;					// 当前帧平移外参
+	int				COL;					// 当前帧图像列数
+	int				ROW;					// 当前帧图像行数
+	bool			retrive;
+
+	bool			has_loop;				// 当前关键帧是否有闭环关键帧
+	int				loop_index;				// 当前关键帧闭环帧的索引
+	bool			update_loop_info;
+
+	bool			is_looped;				// 当前关键帧是否是其他关键帧的闭环
+	int				resample_index;			// 闭环位姿图优化时所用索引
+	const char		*BRIEF_PATTERN_FILE;	// 描述子模板文件路径
+
+	std::vector<Eigen::Vector3d>	point_clouds;
+	std::vector<Eigen::Vector3d>	point_clouds_matched;
 	//feature in origin image plane
-	std::vector<cv::Point2f> measurements, measurements_matched;
+	std::vector<cv::Point2f>		measurements;
+	std::vector<cv::Point2f>		measurements_matched;
 	//feature in normalize image plane
-	std::vector<cv::Point2f> pts_normalize;
+	std::vector<cv::Point2f>		pts_normalize;
+
 	//feature ID
-	std::vector<int> features_id, features_id_matched;
+	std::vector<int>				features_id;
+	std::vector<int>				features_id_matched;
 
-	std::vector<BRIEF::bitset> descriptors;
-	std::vector<cv::KeyPoint> keypoints;
+	std::vector<BRIEF::bitset>		descriptors;	// 当前帧所有特征点的描述子
+	std::vector<cv::KeyPoint>		keypoints;	// 当前帧中提取出的特征点
 
-	//solomon add for point cloud(world)
-	Eigen::Vector3d relocalize_t;
-	Eigen::Matrix3d relocalize_r;
-
-	int global_index;
-	cv::Mat image;
-	Eigen::Matrix3d qic;
-	Eigen::Vector3d tic;
-	int COL, ROW;
-	bool retrive;
-
-	bool has_loop;
-	int loop_index;
-	bool update_loop_info;
-	// index t_x t_y t_z q_w q_x q_y q_z yaw
-	// old_R_cur old_T_cur
-
-	// looped by other frame
-	bool is_looped;
-	int resample_index;
-	const char *BRIEF_PATTERN_FILE;
-	// index t_x t_y t_z q_w q_x q_y q_z yaw
+	Eigen::Vector3d					relocalize_t;			// 当前帧回环矫正位置
+	Eigen::Matrix3d					relocalize_r;			// 当前帧回环矫正姿态
 
 private:
-	Eigen::Vector3d T_w_i;
-	Eigen::Matrix3d R_w_i;
-	Eigen::Vector3d vio_T_w_i;
-	Eigen::Matrix3d vio_R_w_i;
+	Eigen::Vector3d T_w_i;				// 当前关键帧闭环矫正后的位置
+	Eigen::Matrix3d R_w_i;				// 当前关键帧闭环矫正后的姿态
+	Eigen::Vector3d vio_T_w_i;			// 当前关键帧前端计算到的位置
+	Eigen::Matrix3d vio_R_w_i;			// 当前关键帧前端计算到的姿态
 	std::mutex mMutexPose;
 	std::mutex mLoopInfo;
-	std::vector<cv::KeyPoint> window_keypoints;
-	std::vector<BRIEF::bitset> window_descriptors;
-	Eigen::Matrix<double, 8, 1> loop_info;
+	std::vector<cv::KeyPoint> window_keypoints;		// 前端滑窗中提取到的特征
+	std::vector<BRIEF::bitset> window_descriptors;	// 滑窗中特征对应的描述子
+	Eigen::Matrix<double, 8, 1> loop_info;			// tx,ty,tz,qw,qx,qy,qz,yaw
 };
 #endif
