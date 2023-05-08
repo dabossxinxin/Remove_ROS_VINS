@@ -84,6 +84,9 @@ Eigen::Vector3d relocalize_t{Eigen::Vector3d(0, 0, 0)};
 Eigen::Matrix3d relocalize_r{Eigen::Matrix3d::Identity()};
 nav_msgs::Path  loop_path;
 
+std::mutex m_img_vis;
+cv::Mat img_visualization;
+
 void updateLoopPath(nav_msgs::Path _loop_path)
 {
     loop_path = _loop_path;
@@ -164,21 +167,26 @@ void DrawCurrentCamera(pangolin::OpenGlMatrix &Twc)
 	glPopMatrix();
 }
 
+void setImageData(unsigned char * imageArray, int size) {
+	for (int i = 0; i < size; i++) {
+		imageArray[i] = (unsigned char)(rand() / (RAND_MAX / 255.0));
+	}
+}
+
 void visualization()
 {
+	int img_rows = 480;
+	int img_cols = 752;
 	float mViewpointX = -0;
 	float mViewpointY = -5;
 	float mViewpointZ = -10;
 	float mViewpointF = 500;
-	int panelPix = 175;
 	pangolin::CreateWindowAndBind("VINS: Map Visualization",1024,768);
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 	pangolin::CreatePanel("menu").SetBounds(0.0, 1.0, 0.0, float(300.0 / 1024.0));
  	pangolin::Var<bool> menuFollowCamera("menu.Follow Camera", true, true);
  	pangolin::Var<bool> menuShowPoints("menu.Show Points", true, true);
- 	pangolin::Var<bool> menuShowPath("menu.Show Path", true, true);
+	pangolin::Var<bool> menuShowPath("menu.Show Path", true, true);
 
 	// 添加外参曲线图
 	pangolin::DataLog logTic;
@@ -192,11 +200,11 @@ void visualization()
 	std::vector<std::string> labelRic;
 	labelRic.push_back(std::string("yaw"));
 	labelRic.push_back(std::string("pitch"));
-	labelRic.push_back(std::string("roll"));
+	labelRic.push_back(std::string("roll"));                                                                              
 	logRic.SetLabels(labelRic);
 
 	pangolin::Plotter plotterRic(&logRic, 0.0f, 100.0f, -0.02f, 0.02f, 10.0f, 0.001f);
-	plotterRic.SetBounds(float(240.0 / 768.0), float(440.0 / 768.0), float(10.0 / 1024.0), float(290.0 / 1024.0));
+	plotterRic.SetBounds(float(240.0 / 768.0), float(440.0 / 768.0), float(10.0 / 1024.0), float(290.0 / 1024.0));                                                                             
 	plotterRic.Track("$i");
 
 	pangolin::Plotter plotterTic(&logTic, 0.0f, 100.0f, -0.02f, 0.02f, 10.0f, 0.001f);
@@ -216,6 +224,16 @@ void visualization()
 	pangolin::View& d_cam = pangolin::CreateDisplay()
 		.SetBounds(0.0, 1.0, float(300.0 / 1024.0), 1.0, -1024.0f / 768.0f)
 		.SetHandler(new pangolin::Handler3D(s_cam));
+
+	float ratio = float(img_rows) / float(img_cols);
+	int img_width = 280;
+	int img_height = 280.0*ratio;
+	pangolin::View& d_image = pangolin::CreateDisplay()
+		.SetBounds(float(768 - img_height) / 768.0, 1.0f, float(300.0 / 1024.0), float(300 + img_width) / 1024.0, float(img_width) / img_height)
+		.SetLock(pangolin::LockLeft, pangolin::LockTop);
+
+	unsigned char* imageArray = new unsigned char[3 * img_rows*img_cols];
+	pangolin::GlTexture imageTexture(img_cols, img_rows, GL_RGB, false, 0, GL_RGB, GL_UNSIGNED_BYTE);
 	
 	pangolin::OpenGlMatrix Twc;
 	Eigen::Vector3d tic;
@@ -242,6 +260,17 @@ void visualization()
 			keyframe_database.viewPointClouds();
 		if (menuShowPath)
 			keyframe_database.viewPath();
+
+		d_image.Activate();
+		glColor3f(1.0f, 1.0f, 1.0f);
+		std::unique_lock<std::mutex> lock(m_img_vis);
+		if (!img_visualization.empty()) {
+			memcpy(imageArray, img_visualization.data, sizeof(uchar) * 3 * img_rows*img_cols);
+			imageTexture.Upload(imageArray, GL_RGB, GL_UNSIGNED_BYTE);
+			imageTexture.RenderToViewport();
+		}
+		lock.unlock();
+
 		pangolin::FinishFrame();
 	}
 	console::print_highlight("Visualization thread end.\n");
@@ -342,7 +371,7 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
     {
 		std::lock_guard<std::mutex> lg(m_state);
 		predict(imu_msg);
-        /*std_msgs::Header header = imu_msg->header;
+		/*std_msgs::Header header = imu_msg->header;
         header.frame_id = "world";
         if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
             pubLatestOdometry(tmp_P, tmp_Q, tmp_V, header);*/
@@ -368,13 +397,13 @@ void send_imu(const sensor_msgs::ImuConstPtr &imu_msg)
     double ba[]{0.0, 0.0, 0.0};
     double bg[]{0.0, 0.0, 0.0};
 
-    double dx = imu_msg->linear_acceleration.x - ba[0];
-    double dy = imu_msg->linear_acceleration.y - ba[1];
-    double dz = imu_msg->linear_acceleration.z - ba[2];
+	double dx = imu_msg->linear_acceleration.x - ba[0];
+	double dy = imu_msg->linear_acceleration.y - ba[1];
+	double dz = imu_msg->linear_acceleration.z - ba[2];
 
-    double rx = imu_msg->angular_velocity.x - bg[0];
-    double ry = imu_msg->angular_velocity.y - bg[1];
-    double rz = imu_msg->angular_velocity.z - bg[2];
+	double rx = imu_msg->angular_velocity.x - bg[0];
+	double ry = imu_msg->angular_velocity.y - bg[1];
+	double rz = imu_msg->angular_velocity.z - bg[2];
     //ROS_DEBUG("IMU %f, dt: %f, acc: %f %f %f, gyr: %f %f %f", t, dt, dx, dy, dz, rx, ry, rz);
 
 	estimator.processIMU(dt, Eigen::Vector3d(dx, dy, dz), Eigen::Vector3d(rx, ry, rz));
@@ -907,16 +936,17 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 		feature_callback(feature_points);
 
 		// 可视化显示图像特征点
-		cv::Mat tmp_img = show_img.rowRange(0, ROW);
+		cv::Mat tmp_img;
 		cv::cvtColor(show_img, tmp_img, cv::COLOR_GRAY2RGB);
 		for (unsigned int j = 0; j < trackerData[0].cur_pts.size(); j++)
 		{
 			double len = std::min(1.0, 1.0 * trackerData[0].track_cnt[j] / WINDOW_SIZE_FEATURE_TRACKER);
 			cv::circle(tmp_img, trackerData[0].cur_pts[j], 2, cv::Scalar(255 * (1 - len), 0, 255 * len), 2);
 		}
-		cv::namedWindow("vins", cv::WINDOW_NORMAL);
-		cv::imshow("vins", tmp_img);
-		cv::waitKey(5);
+		std::unique_lock<std::mutex> lock(m_img_vis);
+		img_visualization = tmp_img;
+		cv::flip(img_visualization, img_visualization, 0);
+		lock.unlock();
 	}
 }
 
