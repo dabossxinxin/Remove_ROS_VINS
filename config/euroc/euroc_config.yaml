@@ -4,7 +4,7 @@
 imu_topic: "/imu0"
 image_topic: "/cam0/image_raw"
 output_path: "/config/euroc/vins_result.csv"         # vins outputs will be wrttento vins_folder_path + output_path
-vins_folder_path: ".."
+vins_folder_path: "/Users/xiongxinxin/Desktop/Remove_ROS_VINS"
 
 #camera calibration 
 model_type: PINHOLE
@@ -53,8 +53,8 @@ equalize: 1             # if image is too dark or light, trun on equalize to fin
 fisheye: 0              # if using fisheye, trun on it. A circle mask will be loaded to remove edge noisy points
 
 #optimization parameters
-max_solver_time: 0.04  # max solver itration time (ms), to guarantee real time
-max_num_iterations: 8   # max solver itrations, to guarantee real time
+max_solver_time: 2000  # max solver itration time (ms), to guarantee real time
+max_num_iterations: 20   # max solver itrations, to guarantee real time
 keyframe_parallax: 10.0 # keyframe selection threshold (pixel)
 
 #imu parameters       The more accurate parameters you provide, the better performance

@@ -34,7 +34,7 @@ KeyFrame::KeyFrame(double _header, Eigen::Vector3d _vio_T_w_i, Eigen::Matrix3d _
 	vio_T_w_i = _vio_T_w_i;
 	vio_R_w_i = _vio_R_w_i;
 
-	// ÓÃÓÚÔÚÏÔÊ¾´°ÌåÖĞ»æÖÆÂ·±êµãĞÅÏ¢
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½Ğ»ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
 	relocalize_t = _relocalize_t; 
 	relocalize_r = _relocalize_r;
 }
@@ -98,7 +98,7 @@ bool KeyFrame::searchInAera(cv::Point2f center_cur, float area_size,
 	int bestIndex = -1;
 	for (int i = 0; i < (int)descriptors_old.size(); i++)
 	{
-		// ÓÃÓÚ¼ÓËÙÃèÊö×Ó±©Á¦Æ¥ÅäµÄ¹ı³Ì
+		// ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó±ï¿½ï¿½ï¿½Æ¥ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½
 		if (!inAera(keypoints_old[i].pt, center_cur, area_size)) 
 		{
 			continue;
