@@ -38,6 +38,7 @@ public:
 	void FundmantalMatrixRANSAC(std::vector<cv::Point2f> &measurements_old, std::vector<cv::Point2f> &measurements_old_norm,
 		const camodocal::CameraPtr &m_camera);
 
+	// 提取关键帧中的特征点以及对应描述子
 	void extractBrief(cv::Mat &image);
 
 	// 将前端estimator中管理的特征点加入到关键帧中
@@ -45,6 +46,7 @@ public:
 
 	bool inAera(cv::Point2f pt, cv::Point2f center, float area_size);
 
+	// 
 	bool searchInAera(cv::Point2f center_cur, float area_size,
 		const BRIEF::bitset window_descriptor,
 		const std::vector<BRIEF::bitset> &descriptors_old,
@@ -112,33 +114,31 @@ public:
 	int				resample_index;			// 闭环位姿图优化时所用索引
 	const char		*BRIEF_PATTERN_FILE;	// 描述子模板文件路径
 
-	std::vector<Eigen::Vector3d>	point_clouds;
+	std::vector<Eigen::Vector3d>	point_clouds;			// 特征点对应的世界系坐标
 	std::vector<Eigen::Vector3d>	point_clouds_matched;
-	//feature in origin image plane
-	std::vector<cv::Point2f>		measurements;
-	std::vector<cv::Point2f>		measurements_matched;
-	//feature in normalize image plane
-	std::vector<cv::Point2f>		pts_normalize;
 
-	//feature ID
-	std::vector<int>				features_id;
+	std::vector<cv::Point2f>		measurements;			// 特征点相机坐标系坐标
+	std::vector<cv::Point2f>		measurements_matched;
+	std::vector<cv::Point2f>		pts_normalize;			// 归一化相机平面坐标
+
+	std::vector<int>				features_id;			// 特征点的ID
 	std::vector<int>				features_id_matched;
 
-	std::vector<BRIEF::bitset>		descriptors;	// 当前帧所有特征点的描述子
-	std::vector<cv::KeyPoint>		keypoints;	// 当前帧中提取出的特征点
+	std::vector<BRIEF::bitset>		descriptors;			// 当前帧所有特征点的描述子
+	std::vector<cv::KeyPoint>		keypoints;				// 当前帧中提取出的特征点
 
 	Eigen::Vector3d					relocalize_t;			// 当前帧回环矫正位置
 	Eigen::Matrix3d					relocalize_r;			// 当前帧回环矫正姿态
 
 private:
-	Eigen::Vector3d T_w_i;				// 当前关键帧闭环矫正后的位置
-	Eigen::Matrix3d R_w_i;				// 当前关键帧闭环矫正后的姿态
-	Eigen::Vector3d vio_T_w_i;			// 当前关键帧前端计算到的位置
-	Eigen::Matrix3d vio_R_w_i;			// 当前关键帧前端计算到的姿态
-	std::mutex mMutexPose;
-	std::mutex mLoopInfo;
-	std::vector<cv::KeyPoint> window_keypoints;		// 前端滑窗中提取到的特征
-	std::vector<BRIEF::bitset> window_descriptors;	// 滑窗中特征对应的描述子
-	Eigen::Matrix<double, 8, 1> loop_info;			// tx,ty,tz,qw,qx,qy,qz,yaw
+	Eigen::Vector3d					T_w_i;				// 当前关键帧闭环矫正后的位置
+	Eigen::Matrix3d					R_w_i;				// 当前关键帧闭环矫正后的姿态
+	Eigen::Vector3d					vio_T_w_i;			// 当前关键帧前端计算到的位置
+	Eigen::Matrix3d					vio_R_w_i;			// 当前关键帧前端计算到的姿态
+	std::mutex						mMutexPose;			// 互斥锁，位姿量
+	std::mutex						mLoopInfo;			// 互斥锁，闭环信息
+	std::vector<cv::KeyPoint>		window_keypoints;	// 前端滑窗中提取到的特征
+	std::vector<BRIEF::bitset>		window_descriptors;	// 滑窗中特征对应的描述子
+	Eigen::Matrix<double, 8, 1>		loop_info;			// tx,ty,tz,qw,qx,qy,qz,yaw
 };
 #endif

@@ -15,7 +15,10 @@ bool inBorder(const cv::Point2f &pt, int COL, int ROW)
 	const int BORDER_SIZE = 1;
 	int img_x = cvRound(pt.x);
 	int img_y = cvRound(pt.y);
-	return BORDER_SIZE <= img_x && img_x < COL - BORDER_SIZE && BORDER_SIZE <= img_y && img_y < ROW - BORDER_SIZE;
+	return BORDER_SIZE <= img_x &&
+		img_x < COL - BORDER_SIZE &&
+		BORDER_SIZE <= img_y &&
+		img_y < ROW - BORDER_SIZE;
 }
 
 KeyFrame::KeyFrame(double _header, Eigen::Vector3d _vio_T_w_i, Eigen::Matrix3d _vio_R_w_i, 
@@ -34,15 +37,15 @@ KeyFrame::KeyFrame(double _header, Eigen::Vector3d _vio_T_w_i, Eigen::Matrix3d _
 	vio_T_w_i = _vio_T_w_i;
 	vio_R_w_i = _vio_R_w_i;
 
-	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
-	relocalize_t = _relocalize_t; 
+	// ÓÃÓÚÔÚÏÔÊ¾´°ÌåÖÐ»æÖÆÂ·±êµãÐÅÏ¢
+	relocalize_t = _relocalize_t;
 	relocalize_r = _relocalize_r;
 }
 
 void KeyFrame::extractBrief(cv::Mat &image)
 {
     BriefExtractor extractor(BRIEF_PATTERN_FILE);
-    extractor(image, measurements, keypoints, descriptors);
+	extractor(image, measurements, keypoints, descriptors);
     int start = keypoints.size() - measurements.size();
     for(int i = 0; i< (int)measurements.size(); i++)
     {
@@ -98,7 +101,7 @@ bool KeyFrame::searchInAera(cv::Point2f center_cur, float area_size,
 	int bestIndex = -1;
 	for (int i = 0; i < (int)descriptors_old.size(); i++)
 	{
-		// ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó±ï¿½ï¿½ï¿½Æ¥ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½
+		// ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó±ï¿½ï¿½ï¿½Æ¥ï¿½ï¿½Ä¹ï¿½ï¿½ï¿?
 		if (!inAera(keypoints_old[i].pt, center_cur, area_size)) 
 		{
 			continue;

@@ -64,11 +64,10 @@ void readParameters(const std::string & config_file)
 		console::print_error("ERROR:Wrong path to settings: \n", config_file.c_str());
 	}
 
-	//VINS_FOLDER_PATH = _getcwd(NULL,FILENAMEPATH_MAX);
-	//VINS_FOLDER_PATH = getcwd(NULL, FILENAMEPATH_MAX);
-	//console::print_info("INFO: VINS_FOLDER_PATH: %s\n", VINS_FOLDER_PATH.c_str());
+	VINS_FOLDER_PATH = _getcwd(NULL, FILENAMEPATH_MAX);
+	console::print_info("INFO: VINS_FOLDER_PATH: %s\n", VINS_FOLDER_PATH.c_str());
 
-	VINS_FOLDER_PATH = "/Users/xiongxinxin/Desktop/Remove_ROS_VINS";
+	VINS_FOLDER_PATH = "../../";
 	fsSettings["image_topic"] >> IMAGE_TOPIC;
 	fsSettings["imu_topic"] >> IMU_TOPIC;
 	fsSettings["visualLookAtX"] >> VISUALLOOKATX;
