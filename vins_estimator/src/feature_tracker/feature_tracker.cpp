@@ -6,7 +6,7 @@ int FeatureTracker::n_id = 0;
 bool inBorder(const cv::Point2f &pt)
 {
     const int BORDER_SIZE = 1;
-    int img_x = cvRound(pt.x);
+	int img_x = cvRound(pt.x);
     int img_y = cvRound(pt.y);
 	return BORDER_SIZE <= img_x &&
 		img_x < COL - BORDER_SIZE &&
@@ -47,22 +47,23 @@ void FeatureTracker::setMask()
     for (unsigned int i = 0; i < forw_pts.size(); i++)
         cnt_pts_id.emplace_back(std::make_pair(track_cnt[i], std::make_pair(forw_pts[i], ids[i])));
 
-    sort(cnt_pts_id.begin(), cnt_pts_id.end(),
-         [](const std::pair<int, std::pair<cv::Point2f, int>> &a,
+    sort(cnt_pts_id.begin(), cnt_pts_id.end(),[](
+		const std::pair<int, std::pair<cv::Point2f, int>> &a,
                  const std::pair<int, std::pair<cv::Point2f, int>> &b) {
-            return a.first > b.first;
-    });
+		return a.first > b.first;
+	});
 
     forw_pts.clear();
     ids.clear();
     track_cnt.clear();
 
+	// 均匀化当前帧的特征点，在同一区域中的特征点取被观测次数多的点
     for (auto &it : cnt_pts_id) {
         if (mask.at<uchar>(it.second.first) == 255) {
-            forw_pts.emplace_back(it.second.first);
-            ids.emplace_back(it.second.second);
-            track_cnt.emplace_back(it.first);
-            cv::circle(mask, it.second.first, MIN_DIST, 0, -1);
+			forw_pts.emplace_back(it.second.first);
+			ids.emplace_back(it.second.second);
+			track_cnt.emplace_back(it.first);
+			cv::circle(mask, it.second.first, MIN_DIST, 0, -1);
         }
     }
 }
@@ -70,31 +71,31 @@ void FeatureTracker::setMask()
 void FeatureTracker::addPoints()
 {
     for (auto &p : n_pts) {
-        forw_pts.push_back(p);
-        ids.push_back(-1);
-        track_cnt.push_back(1);
+		forw_pts.emplace_back(p);
+		ids.emplace_back(-1);
+		track_cnt.emplace_back(1);
     }
 }
 
 void FeatureTracker::readImage(const cv::Mat &_img)
 {
-    cv::Mat img;
+	cv::Mat img;
 
     // 是否通过图像直方图提升光流跟踪的质量
     if (EQUALIZE) {
-        TicToc t_equalize;
-        cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
-        clahe->apply(_img, img);
-        console::print_info("INFO: feature_track eaqualize time: %d ms.\n", int(t_equalize.toc()));
+		TicToc t_equalize;
+		cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
+		clahe->apply(_img, img);
+		console::print_info("INFO: feature_track eaqualize time: %d ms.\n", int(t_equalize.toc()));
     }
     else
         img = _img;
 
     if (forw_img.empty()) {
-        prev_img = cur_img = forw_img = img;
+		prev_img = cur_img = forw_img = img;
     }
     else {
-        forw_img = img;
+		forw_img = img;
     }
 
     forw_pts.clear();
@@ -105,17 +106,20 @@ void FeatureTracker::readImage(const cv::Mat &_img)
 		std::vector<float> err;
 
         TicToc t_opticalflow;
-        cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 3);
-        console::print_info("INFO: feature_track optical flow lk time: %d ms.\n",int(t_opticalflow.toc()));
+		cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 3);
+		console::print_info("INFO: feature_track optical flow lk time: %d ms.\n", int(t_opticalflow.toc()));
 
-        for (int i = 0; i < int(forw_pts.size()); ++i)
-            if (status[i] && !inBorder(forw_pts[i]))
-                status[i] = 0;
+		for (int i = 0; i < int(forw_pts.size()); ++i) {
+			if (status[i] && !inBorder(forw_pts[i])) {
+				status[i] = 0;
+			}
+		}
+
         reduceVector(prev_pts, status);
         reduceVector(cur_pts, status);
         reduceVector(forw_pts, status);
         reduceVector(ids, status);
-        reduceVector(track_cnt, status);
+		reduceVector(track_cnt, status);
     }
 
     if (PUB_THIS_FRAME) {
@@ -133,14 +137,14 @@ void FeatureTracker::readImage(const cv::Mat &_img)
         if (n_max_cnt > 0) {
             if(mask.empty())
                 console::print_error("ERROR: feature_track mask is empty.\n");
-            if (mask.type() != CV_8UC1)
-                console::print_error("ERROR: feature_track mask type wrong.\n");
+			if (mask.type() != CV_8UC1)
+				console::print_error("ERROR: feature_track mask type wrong.\n");
             if (mask.size() != forw_img.size())
                 console::print_error("ERROR: feature_track mask wrong size.\n");
-            cv::goodFeaturesToTrack(forw_img, n_pts, MAX_CNT - forw_pts.size(), 0.1, MIN_DIST, mask);
+			cv::goodFeaturesToTrack(forw_img, n_pts, MAX_CNT - forw_pts.size(), 0.1, MIN_DIST, mask);
         }
         else {
-            n_pts.clear();
+			n_pts.clear();
         }
         console::print_info("INFO: feature_track goodFeaturesToTrack costs %d ms.\n",int(t_goodFeature.toc()));
 
@@ -203,32 +207,27 @@ void FeatureTracker::showUndistortion(const std::string &name)
 {
     cv::Mat undistortedImg(ROW + 600, COL + 600, CV_8UC1, cv::Scalar(0));
 	std::vector<Eigen::Vector2d> distortedp, undistortedp;
-    for (int i = 0; i < COL; i++)
-        for (int j = 0; j < ROW; j++)
-        {
-            Eigen::Vector2d a(i, j);
-            Eigen::Vector3d b;
-            m_camera->liftProjective(a, b);
-            distortedp.push_back(a);
-            undistortedp.push_back(Eigen::Vector2d(b.x() / b.z(), b.y() / b.z()));
-            //printf("%f,%f->%f,%f,%f\n)\n", a.x(), a.y(), b.x(), b.y(), b.z());
-        }
-    for (int i = 0; i < int(undistortedp.size()); i++)
-    {
-        cv::Mat pp(3, 1, CV_32FC1);
-        pp.at<float>(0, 0) = undistortedp[i].x() * FOCAL_LENGTH + COL / 2;
-        pp.at<float>(1, 0) = undistortedp[i].y() * FOCAL_LENGTH + ROW / 2;
-        pp.at<float>(2, 0) = 1.0;
-        //cout << trackerData[0].K << endl;
-        //printf("%lf %lf\n", p.at<float>(1, 0), p.at<float>(0, 0));
-        //printf("%lf %lf\n", pp.at<float>(1, 0), pp.at<float>(0, 0));
-        if (pp.at<float>(1, 0) + 300 >= 0 && pp.at<float>(1, 0) + 300 < ROW + 600 && pp.at<float>(0, 0) + 300 >= 0 && pp.at<float>(0, 0) + 300 < COL + 600)
-        {
+	for (int i = 0; i < COL; ++i) {
+		for (int j = 0; j < ROW; ++j) {
+			Eigen::Vector2d a(i, j);
+			Eigen::Vector3d b;
+			m_camera->liftProjective(a, b);
+			distortedp.emplace_back(a);
+			undistortedp.emplace_back(Eigen::Vector2d(b.x() / b.z(), b.y() / b.z()));
+		}
+	}
+
+	float half_col = COL * 0.5;
+	float half_row = ROW * 0.5;
+	cv::Mat pp(3, 1, CV_32FC1);
+    for (int i = 0; i < int(undistortedp.size()); ++i) {
+		pp.at<float>(2, 0) = 1.0;
+        pp.at<float>(0, 0) = undistortedp[i].x() * FOCAL_LENGTH + half_col;
+		pp.at<float>(1, 0) = undistortedp[i].y() * FOCAL_LENGTH + half_row;
+     
+        if (pp.at<float>(1, 0) + 300 >= 0 && pp.at<float>(1, 0) + 300 < ROW + 600 && 
+			pp.at<float>(0, 0) + 300 >= 0 && pp.at<float>(0, 0) + 300 < COL + 600) {
             undistortedImg.at<uchar>(pp.at<float>(1, 0) + 300, pp.at<float>(0, 0) + 300) = cur_img.at<uchar>(distortedp[i].y(), distortedp[i].x());
-        }
-        else
-        {
-            //ROS_ERROR("(%f %f) -> (%f %f)", distortedp[i].y, distortedp[i].x, pp.at<float>(1, 0), pp.at<float>(0, 0));
         }
     }
     cv::imshow(name, undistortedImg);
@@ -238,12 +237,11 @@ void FeatureTracker::showUndistortion(const std::string &name)
 std::vector<cv::Point2f> FeatureTracker::undistortedPoints()
 {
 	std::vector<cv::Point2f> un_pts;
-    for (unsigned int i = 0; i < cur_pts.size(); i++)
-    {
+    for (unsigned int i = 0; i < cur_pts.size(); i++) {
         Eigen::Vector2d a(cur_pts[i].x, cur_pts[i].y);
         Eigen::Vector3d b;
         m_camera->liftProjective(a, b);
-        un_pts.push_back(cv::Point2f(b.x() / b.z(), b.y() / b.z()));
+		un_pts.emplace_back(cv::Point2f(b.x() / b.z(), b.y() / b.z()));
     }
 
     return un_pts;

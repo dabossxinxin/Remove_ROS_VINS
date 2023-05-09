@@ -138,7 +138,7 @@ void readParameters(const std::string & config_file)
 	if (LOOP_CLOSURE == 1) {
 		fsSettings["voc_file"] >> VOC_FILE;
 		fsSettings["pattern_file"] >> PATTERN_FILE;
-		// TODO���˴����شʴ��ļ�����ջ������⣬�ȸ�һ�������·��
+		// TODO 闭环检测加载词袋文件有问题，先给一个错误的路径
 		VOC_FILE = "../" + VINS_FOLDER_PATH + VOC_FILE;
 		PATTERN_FILE = VINS_FOLDER_PATH + PATTERN_FILE;
 		MIN_LOOP_NUM = fsSettings["min_loop_num"];

@@ -39,7 +39,6 @@ void BRIEF::compute(const cv::Mat &image,
 	std::vector<bitset> &descriptors,
     bool treat_image) const {
     const float sigma = 2.f;
-    //const cv::Size guassian_kernal_size(9, 9);
 
     cv::Mat im;
     if (treat_image) {
@@ -47,11 +46,10 @@ void BRIEF::compute(const cv::Mat &image,
         if (image.depth() == 3) {
             cv::cvtColor(image, aux, cv::COLOR_RGB2GRAY);
         } else {
-            aux = image;
+			aux = image;
         }
 
-        //cv::GaussianBlur(aux, im, cv::Size_<int>(9,9), sigma, sigma);
-
+		cv::GaussianBlur(aux, im, cv::Size_<int>(9, 9), sigma, sigma);
     } else {
         im = image;
     }
