@@ -816,14 +816,15 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 #endif
 	}
 
+    // 双目情况
 	if (PUB_THIS_FRAME && STEREO_TRACK && trackerData[0].cur_pts.size() > 0)
 	{
 		pub_count++;
 		r_status.clear();
 		r_err.clear();
-		TicToc t_o;
+
 		cv::calcOpticalFlowPyrLK(trackerData[0].cur_img, trackerData[1].cur_img, trackerData[0].cur_pts, trackerData[1].cur_pts, r_status, r_err, cv::Size(21, 21), 3);
-		//     ROS_DEBUG("spatial optical flow costs: %fms", t_o.toc());
+
 		std::vector<cv::Point2f> ll, rr;
 		std::vector<int> idx;
 		for (unsigned int i = 0; i < r_status.size(); i++)
@@ -863,6 +864,7 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 		}
 	}
 
+    // 更新特征点ID
 	for (unsigned int i = 0;; i++)
 	{
 		bool completed = false;

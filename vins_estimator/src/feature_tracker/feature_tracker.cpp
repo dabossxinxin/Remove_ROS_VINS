@@ -45,7 +45,7 @@ void FeatureTracker::setMask()
 
 	std::vector<std::pair<int, std::pair<cv::Point2f, int>>> cnt_pts_id;
     for (unsigned int i = 0; i < forw_pts.size(); i++)
-        cnt_pts_id.push_back(std::make_pair(track_cnt[i], std::make_pair(forw_pts[i], ids[i])));
+        cnt_pts_id.emplace_back(std::make_pair(track_cnt[i], std::make_pair(forw_pts[i], ids[i])));
 
     sort(cnt_pts_id.begin(), cnt_pts_id.end(),
          [](const std::pair<int, std::pair<cv::Point2f, int>> &a,
@@ -57,13 +57,11 @@ void FeatureTracker::setMask()
     ids.clear();
     track_cnt.clear();
 
-    for (auto &it : cnt_pts_id)
-    {
-        if (mask.at<uchar>(it.second.first) == 255)
-        {
-            forw_pts.push_back(it.second.first);
-            ids.push_back(it.second.second);
-            track_cnt.push_back(it.first);
+    for (auto &it : cnt_pts_id) {
+        if (mask.at<uchar>(it.second.first) == 255) {
+            forw_pts.emplace_back(it.second.first);
+            ids.emplace_back(it.second.second);
+            track_cnt.emplace_back(it.first);
             cv::circle(mask, it.second.first, MIN_DIST, 0, -1);
         }
     }
@@ -71,8 +69,7 @@ void FeatureTracker::setMask()
 
 void FeatureTracker::addPoints()
 {
-    for (auto &p : n_pts)
-    {
+    for (auto &p : n_pts) {
         forw_pts.push_back(p);
         ids.push_back(-1);
         track_cnt.push_back(1);
@@ -82,37 +79,36 @@ void FeatureTracker::addPoints()
 void FeatureTracker::readImage(const cv::Mat &_img)
 {
     cv::Mat img;
-    TicToc t_r;
 
-    if (EQUALIZE)
-    {
+    // 是否通过图像直方图提升光流跟踪的质量
+    if (EQUALIZE) {
+        TicToc t_equalize;
         cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
-        TicToc t_c;
         clahe->apply(_img, img);
-      //  ROS_DEBUG("CLAHE costs: %fms", t_c.toc());
+        console::print_info("INFO: feature_track eaqualize time: %d ms.\n", int(t_equalize.toc()));
     }
     else
         img = _img;
 
-    if (forw_img.empty())
-    {
+    if (forw_img.empty()) {
         prev_img = cur_img = forw_img = img;
     }
-    else
-    {
+    else {
         forw_img = img;
     }
 
     forw_pts.clear();
 
-    if (cur_pts.size() > 0)
-    {
-        TicToc t_o;
+    // 上一帧特征点存在时，光流跟踪出当前帧特征点
+    if (cur_pts.size() > 0) {
 		std::vector<uchar> status;
 		std::vector<float> err;
-        cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 3);
 
-        for (int i = 0; i < int(forw_pts.size()); i++)
+        TicToc t_opticalflow;
+        cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 3);
+        console::print_info("INFO: feature_track optical flow lk time: %d ms.\n",int(t_opticalflow.toc()));
+
+        for (int i = 0; i < int(forw_pts.size()); ++i)
             if (status[i] && !inBorder(forw_pts[i]))
                 status[i] = 0;
         reduceVector(prev_pts, status);
@@ -120,11 +116,9 @@ void FeatureTracker::readImage(const cv::Mat &_img)
         reduceVector(forw_pts, status);
         reduceVector(ids, status);
         reduceVector(track_cnt, status);
-        console::print_info("INFO: feature_track optical flow costs: %fms.\n",t_o.toc());
     }
 
-    if (PUB_THIS_FRAME)
-    {
+    if (PUB_THIS_FRAME) {
         rejectWithF();
 
         for (auto &n : track_cnt)
@@ -132,12 +126,11 @@ void FeatureTracker::readImage(const cv::Mat &_img)
 
         TicToc t_m;
         setMask();
-        console::print_info("INFO: feature_track set mask costs %fms.\n", t_m.toc());
+        console::print_info("INFO: feature_track set mask costs %d ms.\n", int(t_m.toc()));
 
-        TicToc t_t;
+        TicToc t_goodFeature;
         int n_max_cnt = MAX_CNT - static_cast<int>(forw_pts.size());
-        if (n_max_cnt > 0)
-        {
+        if (n_max_cnt > 0) {
             if(mask.empty())
                 console::print_error("ERROR: feature_track mask is empty.\n");
             if (mask.type() != CV_8UC1)
@@ -149,7 +142,7 @@ void FeatureTracker::readImage(const cv::Mat &_img)
         else {
             n_pts.clear();
         }
-        console::print_info("INFO: feature_track goodFeaturesToTrack costs %fms.\n",t_t.toc());
+        console::print_info("INFO: feature_track goodFeaturesToTrack costs %d ms.\n",int(t_goodFeature.toc()));
 
         addPoints();
 
@@ -162,42 +155,36 @@ void FeatureTracker::readImage(const cv::Mat &_img)
 
 void FeatureTracker::rejectWithF()
 {
-    if (forw_pts.size() >= 8)
-    {
-       // ROS_DEBUG("FM ransac begins");
-        TicToc t_f;
+    double half_col = COL * 0.5;
+    double half_row = ROW * 0.5;
+    if (forw_pts.size() >= 8) {
 		std::vector<cv::Point2f> un_prev_pts(prev_pts.size()), un_forw_pts(forw_pts.size());
-        for (unsigned int i = 0; i < prev_pts.size(); i++)
-        {
+        for (unsigned int i = 0; i < prev_pts.size(); ++i) {
             Eigen::Vector3d tmp_p;
             m_camera->liftProjective(Eigen::Vector2d(prev_pts[i].x, prev_pts[i].y), tmp_p);
-            tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
-            tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;
+            tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + half_col;
+            tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + half_row;
             un_prev_pts[i] = cv::Point2f(tmp_p.x(), tmp_p.y());
 
             m_camera->liftProjective(Eigen::Vector2d(forw_pts[i].x, forw_pts[i].y), tmp_p);
-            tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
-            tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;
+            tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + half_col;
+            tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + half_row;
 			un_forw_pts[i] = cv::Point2f(tmp_p.x(), tmp_p.y());
         }
 
 		std::vector<uchar> status;
         cv::findFundamentalMat(un_prev_pts, un_forw_pts, cv::FM_RANSAC, F_THRESHOLD, 0.99, status);
-        int size_a = prev_pts.size();
         reduceVector(prev_pts, status);
         reduceVector(cur_pts, status);
         reduceVector(forw_pts, status);
         reduceVector(ids, status);
         reduceVector(track_cnt, status);
-      //  ROS_DEBUG("FM ransac: %d -> %lu: %f", size_a, forw_pts.size(), 1.0 * forw_pts.size() / size_a);
-      //  ROS_DEBUG("FM ransac costs: %fms", t_f.toc());
     }
 }
 
 bool FeatureTracker::updateID(unsigned int i)
 {
-    if (i < ids.size())
-    {
+    if (i < ids.size()) {
         if (ids[i] == -1)
             ids[i] = n_id++;
         return true;
@@ -251,7 +238,6 @@ void FeatureTracker::showUndistortion(const std::string &name)
 std::vector<cv::Point2f> FeatureTracker::undistortedPoints()
 {
 	std::vector<cv::Point2f> un_pts;
-    //cv::undistortPoints(cur_pts, un_pts, K, cv::Mat());
     for (unsigned int i = 0; i < cur_pts.size(); i++)
     {
         Eigen::Vector2d a(cur_pts[i].x, cur_pts[i].y);

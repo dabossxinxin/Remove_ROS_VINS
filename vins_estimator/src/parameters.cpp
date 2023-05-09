@@ -64,11 +64,11 @@ void readParameters(const std::string & config_file)
 		console::print_error("ERROR:Wrong path to settings: \n", config_file.c_str());
 	}
 
-	VINS_FOLDER_PATH = _getcwd(NULL,FILENAMEPATH_MAX);
+	//VINS_FOLDER_PATH = _getcwd(NULL,FILENAMEPATH_MAX);
 	//VINS_FOLDER_PATH = getcwd(NULL, FILENAMEPATH_MAX);
-	console::print_info("INFO: VINS_FOLDER_PATH: %s\n", VINS_FOLDER_PATH.c_str());
+	//console::print_info("INFO: VINS_FOLDER_PATH: %s\n", VINS_FOLDER_PATH.c_str());
 
-	VINS_FOLDER_PATH = "../..";
+	VINS_FOLDER_PATH = "/Users/xiongxinxin/Desktop/Remove_ROS_VINS";
 	fsSettings["image_topic"] >> IMAGE_TOPIC;
 	fsSettings["imu_topic"] >> IMU_TOPIC;
 	fsSettings["visualLookAtX"] >> VISUALLOOKATX;
@@ -139,7 +139,7 @@ void readParameters(const std::string & config_file)
 	if (LOOP_CLOSURE == 1) {
 		fsSettings["voc_file"] >> VOC_FILE;
 		fsSettings["pattern_file"] >> PATTERN_FILE;
-		// TODO：此处加载词袋文件后检测闭环有问题，先给一个错误的路径
+		// TODO锟斤拷锟剿达拷锟斤拷锟截词达拷锟侥硷拷锟斤拷锟斤拷栈锟斤拷锟斤拷锟斤拷猓拷雀锟揭伙拷锟斤拷锟斤拷锟斤拷路锟斤拷
 		VOC_FILE = "../" + VINS_FOLDER_PATH + VOC_FILE;
 		PATTERN_FILE = VINS_FOLDER_PATH + PATTERN_FILE;
 		MIN_LOOP_NUM = fsSettings["min_loop_num"];
