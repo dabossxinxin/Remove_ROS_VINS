@@ -17,10 +17,10 @@ bool inBorder(const cv::Point2f &pt)
 void reduceVector(std::vector<cv::Point2f> &v, std::vector<uchar> status)
 {
     int j = 0;
-    for (int i = 0; i < int(v.size()); i++)
-        if (status[i])
-            v[j++] = v[i];
-    v.resize(j);
+	for (int i = 0; i < int(v.size()); i++)
+		if (status[i])
+			v[j++] = v[i];
+	v.resize(j);
 }
 
 void reduceVector(std::vector<int> &v, std::vector<uchar> status)
@@ -82,14 +82,14 @@ void FeatureTracker::readImage(const cv::Mat &_img)
 	cv::Mat img;
 
     // 是否通过图像直方图提升光流跟踪的质量
-    if (EQUALIZE) {
+	if (EQUALIZE) {
 		TicToc t_equalize;
 		cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
 		clahe->apply(_img, img);
 		console::print_info("INFO: feature_track eaqualize time: %d ms.\n", int(t_equalize.toc()));
-    }
-    else
-        img = _img;
+	}
+	else
+		img = _img;
 
     if (forw_img.empty()) {
 		prev_img = cur_img = forw_img = img;
@@ -98,7 +98,7 @@ void FeatureTracker::readImage(const cv::Mat &_img)
 		forw_img = img;
     }
 
-    forw_pts.clear();
+	forw_pts.clear();
 
     // 上一帧特征点存在时，光流跟踪出当前帧特征点
     if (cur_pts.size() > 0) {

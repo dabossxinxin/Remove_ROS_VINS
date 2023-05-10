@@ -27,27 +27,28 @@
 struct RetriveData
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    /* data */
-    int old_index;
-    int cur_index;
-    double header;
-	Eigen::Vector3d P_old;
-	Eigen::Matrix3d R_old;
-	std::vector<cv::Point2f> measurements;
-	std::vector<int> features_ids;
-    bool relocalized;
-    bool relative_pose;
-	Eigen::Vector3d relative_t;
-	Eigen::Quaterniond relative_q;
-    double relative_yaw;
-    double loop_pose[7];
+
+	int		old_index;		// 回环帧ID
+	int		cur_index;		// 当前帧ID
+    double	header;			// 当前帧时间戳
+	bool	relocalized;	// 当前信息是否已经用于重定位
+	bool	relative_pose;	// 当前信息中是否有回环前后相同帧的位姿变换
+	double	relative_yaw;	// 回环前后回环帧的YAW变换量
+	double	loop_pose[7];	// 回环帧通过PnP计算得到的位姿
+	Eigen::Vector3d				P_old;			// 回环帧位置
+	Eigen::Matrix3d				R_old;			// 回环帧姿态
+	Eigen::Vector3d				relative_t;		// 回环前后回环帧的位置变化量
+	Eigen::Quaterniond			relative_q;		// 回环前后回环帧的姿态变化量
+	std::vector<cv::Point2f>	measurements;	// 当前帧在回环中匹配到的特征点
+	std::vector<int>			features_ids;	// 当前帧中匹配到的特征点ID
 };
 
 class Estimator
 {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-		Estimator();
+
+	Estimator();
 
 	void setParameter();
 
@@ -68,7 +69,6 @@ public:
 	void vector2double();
 	void double2vector();
 	bool failureDetection();
-
 
 	enum SolverFlag
 	{
@@ -116,7 +116,8 @@ public:
 	InitialEXRotation initial_ex_rotation;
 
 	bool first_imu;
-	bool is_valid, is_key;
+	bool is_valid;
+	bool is_key;
 	bool failure_occur;
 
 	std::vector<Eigen::Vector3d> point_cloud;

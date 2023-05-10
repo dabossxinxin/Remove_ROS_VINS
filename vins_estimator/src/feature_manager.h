@@ -56,7 +56,8 @@ class FeatureManager
 {
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-		FeatureManager(Eigen::Matrix3d _Rs[]);
+
+	FeatureManager(Eigen::Matrix3d _Rs[]);
 
 	void setRic(Eigen::Matrix3d _ric[]);
 

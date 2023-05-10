@@ -30,7 +30,6 @@ int FeatureManager::getFeatureCount()
     int cnt = 0;
 	for (auto &it : feature)
 	{
-
 		it.used_num = it.feature_per_frame.size();
 
 		if (it.used_num >= 2 && it.start_frame < WINDOW_SIZE - 2)
@@ -44,33 +43,30 @@ int FeatureManager::getFeatureCount()
 
 bool FeatureManager::addFeatureCheckParallax(int frame_count, const std::map<int, std::vector<std::pair<int, Eigen::Vector3d>>> &image)
 {
-  //  ROS_DEBUG("input feature: %d", (int)image.size());
-  //  ROS_DEBUG("num of feature: %d", getFeatureCount());
     double parallax_sum = 0;
     int parallax_num = 0;
     last_track_num = 0;
-    for (auto &id_pts : image)
-    {
+
+	// 将观测到的图像特征数据全部加入到this->feature中
+    for (auto &id_pts : image) {
         FeaturePerFrame f_per_fra(id_pts.second[0].second);
 
         int feature_id = id_pts.first;
-        auto it = find_if(feature.begin(), feature.end(), [feature_id](const FeaturePerId &it)
-                          {
+        auto it = find_if(feature.begin(), feature.end(), [feature_id](const FeaturePerId &it) {
             return it.feature_id == feature_id;
-                          });
+		});
 
-        if (it == feature.end())
-        {
-            feature.push_back(FeaturePerId(feature_id, frame_count));
-            feature.back().feature_per_frame.push_back(f_per_fra);
+        if (it == feature.end()) {
+			feature.push_back(FeaturePerId(feature_id, frame_count));
+			feature.back().feature_per_frame.push_back(f_per_fra);
         }
-        else if (it->feature_id == feature_id)
-        {
+        else if (it->feature_id == feature_id) {
             it->feature_per_frame.push_back(f_per_fra);
             last_track_num++;
         }
     }
 
+	// 跟踪到的特征点数量较少或系统刚刚开始时，次新帧为关键帧
     if (frame_count < 2 || last_track_num < 20)
         return true;
 
@@ -79,21 +75,16 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const std::map<int
         if (it_per_id.start_frame <= frame_count - 2 &&
             it_per_id.start_frame + int(it_per_id.feature_per_frame.size()) - 1 >= frame_count - 1)
         {
-            parallax_sum += compensatedParallax2(it_per_id, frame_count);
+			parallax_sum += compensatedParallax2(it_per_id, frame_count);
             parallax_num++;
         }
     }
 
-    if (parallax_num == 0)
-    {
-        return true;
-    }
+	// 观测两帧间的视差足够大时，次新帧为关键帧
+	if (parallax_num == 0)
+		return true;
     else
-    {
-     //   ROS_DEBUG("parallax_sum: %lf, parallax_num: %d", parallax_sum, parallax_num);
-     //   ROS_DEBUG("current parallax: %lf", parallax_sum / parallax_num * FOCAL_LENGTH);
         return parallax_sum / parallax_num >= MIN_PARALLAX;
-    }
 }
 
 void FeatureManager::debugShow()
@@ -393,5 +384,5 @@ double FeatureManager::compensatedParallax2(const FeaturePerId &it_per_id, int f
 
     ans = std::max(ans, sqrt(std::min(du * du + dv * dv, du_comp * du_comp + dv_comp * dv_comp)));
 
-    return ans;
+	return ans;
 }

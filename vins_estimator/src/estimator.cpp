@@ -2,15 +2,13 @@
 
 Estimator::Estimator(): f_manager{Rs}
 {
-    //ROS_INFO("init begins");
     clearState();
     failure_occur = 0;
 }
 
 void Estimator::setParameter()
 {
-    for (int i = 0; i < NUM_OF_CAM; i++)
-    {
+    for (int i = 0; i < NUM_OF_CAM; ++i) {
         tic[i] = TIC[i];
         ric[i] = RIC[i];
     }
@@ -20,8 +18,7 @@ void Estimator::setParameter()
 
 void Estimator::clearState()
 {
-    for (int i = 0; i < WINDOW_SIZE + 1; i++)
-    {
+    for (int i = 0; i < WINDOW_SIZE + 1; ++i){
         Rs[i].setIdentity();
         Ps[i].setZero();
         Vs[i].setZero();
@@ -31,15 +28,13 @@ void Estimator::clearState()
         linear_acceleration_buf[i].clear();
         angular_velocity_buf[i].clear();
 
-        if (pre_integrations[i] != nullptr)
-        {
+        if (pre_integrations[i] != nullptr){
             delete pre_integrations[i];
         }
         pre_integrations[i] = nullptr;
     }
 
-    for (int i = 0; i < NUM_OF_CAM; i++)
-    {
+    for (int i = 0; i < NUM_OF_CAM; i++) {
         tic[i] = Eigen::Vector3d::Zero();
         ric[i] = Eigen::Matrix3d::Identity();
     }
@@ -71,27 +66,28 @@ void Estimator::clearState()
 
 void Estimator::processIMU(double dt, const Eigen::Vector3d &linear_acceleration, const Eigen::Vector3d &angular_velocity)
 {
-    if (!first_imu)
-    {
+    if (!first_imu) {
         first_imu = true;
         acc_0 = linear_acceleration;
         gyr_0 = angular_velocity;
     }
 
-    if (!pre_integrations[frame_count])
-    {
+    if (!pre_integrations[frame_count]) {
         pre_integrations[frame_count] = new IntegrationBase{acc_0, gyr_0, Bas[frame_count], Bgs[frame_count]};
     }
-    if (frame_count != 0)
-    {
+
+    if (frame_count != 0) {
+		// 进来的惯导数据进入预积分环节
         pre_integrations[frame_count]->push_back(dt, linear_acceleration, angular_velocity);
         //if(solver_flag != NON_LINEAR)
             tmp_pre_integration->push_back(dt, linear_acceleration, angular_velocity);
 
-        dt_buf[frame_count].push_back(dt);
-        linear_acceleration_buf[frame_count].push_back(linear_acceleration);
-        angular_velocity_buf[frame_count].push_back(angular_velocity);
+		// 保存进来的惯导数据到对应buf中
+        dt_buf[frame_count].emplace_back(dt);
+        linear_acceleration_buf[frame_count].emplace_back(linear_acceleration);
+		angular_velocity_buf[frame_count].emplace_back(angular_velocity);
 
+		// 中值积分计算图像帧状态初始值
         int j = frame_count;         
 		Eigen::Vector3d un_acc_0 = Rs[j] * (acc_0 - Bas[j]) - g;
 		Eigen::Vector3d un_gyr = 0.5 * (gyr_0 + angular_velocity) - Bgs[j];
@@ -103,24 +99,16 @@ void Estimator::processIMU(double dt, const Eigen::Vector3d &linear_acceleration
     }
     acc_0 = linear_acceleration;
     gyr_0 = angular_velocity;
-	//std::cout << "acc_0 : " << acc_0 << std::endl;
-	//std::cout << "gyr_0 : " << gyr_0 << std::endl;
-
 }
 
 void Estimator::processImage(const std::map<int, std::vector<std::pair<int, Eigen::Vector3d>>> &image, const std_msgs::Header &header)
 {
-   // ROS_DEBUG("new image coming ------------------------------------------");
-  //  ROS_DEBUG("Adding feature points %lu", image.size());
-    if (f_manager.addFeatureCheckParallax(frame_count, image))
-        marginalization_flag = MARGIN_OLD;
-    else
-        marginalization_flag = MARGIN_SECOND_NEW;
+	// 将图像特征数据加入f_manage中并判断次新帧是否为关键帧
+	if (f_manager.addFeatureCheckParallax(frame_count, image))
+		marginalization_flag = MARGIN_OLD;
+	else
+		marginalization_flag = MARGIN_SECOND_NEW;
 
-  // ("this frame is--------------------%s", marginalization_flag ? "reject" : "accept");
-   // ROS_DEBUG("%s", marginalization_flag ? "Non-keyframe" : "Keyframe");
-   // ROS_DEBUG("Solving %d", frame_count);
-   //std::cout  << "number of feature: " <<  f_manager.getFeatureCount() << std::endl;
     Headers[frame_count] = header;
 
     ImageFrame imageframe(image, header.stamp.toSec());
@@ -206,6 +194,7 @@ void Estimator::processImage(const std::map<int, std::vector<std::pair<int, Eige
         last_P0 = Ps[0];
     }
 }
+
 bool Estimator::initialStructure()
 {
     TicToc t_sfm;
@@ -585,21 +574,28 @@ void Estimator::double2vector()
         dep(i) = para_Feature[i][0];
     f_manager.setDepth(dep);
 
-    if (LOOP_CLOSURE && relocalize && retrive_data_vector[0].relative_pose && !retrive_data_vector[0].relocalized)
-    {
+    if (LOOP_CLOSURE && relocalize && retrive_data_vector[0].relative_pose && !retrive_data_vector[0].relocalized) {
         for (int i = 0; i < (int)retrive_data_vector.size();i++)
             retrive_data_vector[i].relocalized = true;
+
 		Eigen::Matrix3d vio_loop_r;
 		Eigen::Vector3d vio_loop_t;
-        vio_loop_r = rot_diff * Eigen::Quaterniond(retrive_data_vector[0].loop_pose[6], retrive_data_vector[0].loop_pose[3], retrive_data_vector[0].loop_pose[4], retrive_data_vector[0].loop_pose[5]).normalized().toRotationMatrix();
-        vio_loop_t = rot_diff * Eigen::Vector3d(retrive_data_vector[0].loop_pose[0] - para_Pose[0][0],
-                                retrive_data_vector[0].loop_pose[1] - para_Pose[0][1],
-                                retrive_data_vector[0].loop_pose[2] - para_Pose[0][2]) + origin_P0;
+
+		vio_loop_r = rot_diff * Eigen::Quaterniond(
+			retrive_data_vector[0].loop_pose[6],
+			retrive_data_vector[0].loop_pose[3],
+			retrive_data_vector[0].loop_pose[4],
+			retrive_data_vector[0].loop_pose[5]).normalized().toRotationMatrix();
+		vio_loop_t = rot_diff * Eigen::Vector3d(
+			retrive_data_vector[0].loop_pose[0] - para_Pose[0][0],
+			retrive_data_vector[0].loop_pose[1] - para_Pose[0][1],
+			retrive_data_vector[0].loop_pose[2] - para_Pose[0][2]) + origin_P0;
+
 		Eigen::Quaterniond vio_loop_q(vio_loop_r);
-        double relocalize_yaw;
-        relocalize_yaw = Utility::R2ypr(retrive_data_vector[0].R_old).x() - Utility::R2ypr(vio_loop_r).x();
-        relocalize_r = Utility::ypr2R(Eigen::Vector3d(relocalize_yaw, 0, 0));
-        relocalize_t = retrive_data_vector[0].P_old- relocalize_r * vio_loop_t;
+		double relocalize_yaw;
+		relocalize_yaw = Utility::R2ypr(retrive_data_vector[0].R_old).x() - Utility::R2ypr(vio_loop_r).x();
+		relocalize_r = Utility::ypr2R(Eigen::Vector3d(relocalize_yaw, 0, 0));
+		relocalize_t = retrive_data_vector[0].P_old - relocalize_r * vio_loop_t;
     }
 }
 
@@ -809,19 +805,32 @@ void Estimator::optimization()
                 if(retrive_data_vector[k].header == Headers[i].stamp.toSec())
                 {
                     retrive_data_vector[k].relative_pose = true;
-					Eigen::Matrix3d Rs_i = Eigen::Quaterniond(para_Pose[i][6], para_Pose[i][3], para_Pose[i][4], para_Pose[i][5]).normalized().toRotationMatrix();
-					Eigen::Vector3d Ps_i = Eigen::Vector3d(para_Pose[i][0], para_Pose[i][1], para_Pose[i][2]);
-					Eigen::Quaterniond Qs_loop;
-                    Qs_loop = Eigen::Quaterniond(retrive_data_vector[k].loop_pose[6],  retrive_data_vector[k].loop_pose[3],  retrive_data_vector[k].loop_pose[4],  retrive_data_vector[k].loop_pose[5]).normalized().toRotationMatrix();
-					Eigen::Matrix3d Rs_loop = Qs_loop.toRotationMatrix();
-					Eigen::Vector3d Ps_loop = Eigen::Vector3d( retrive_data_vector[k].loop_pose[0],  retrive_data_vector[k].loop_pose[1],  retrive_data_vector[k].loop_pose[2]);
+					Eigen::Matrix3d Rs_i = Eigen::Quaterniond(
+						para_Pose[i][6], 
+						para_Pose[i][3], 
+						para_Pose[i][4], 
+						para_Pose[i][5]).normalized().toRotationMatrix();
+					Eigen::Vector3d Ps_i = Eigen::Vector3d(
+						para_Pose[i][0], 
+						para_Pose[i][1], 
+						para_Pose[i][2]);
+
+					Eigen::Matrix3d Rs_loop = Eigen::Quaterniond(
+						retrive_data_vector[k].loop_pose[6], 
+						retrive_data_vector[k].loop_pose[3], 
+						retrive_data_vector[k].loop_pose[4], 
+						retrive_data_vector[k].loop_pose[5]).normalized().toRotationMatrix();;
+					Eigen::Vector3d Ps_loop = Eigen::Vector3d(
+						retrive_data_vector[k].loop_pose[0],
+						retrive_data_vector[k].loop_pose[1],
+						retrive_data_vector[k].loop_pose[2]);
 
                     retrive_data_vector[k].relative_t = Rs_loop.transpose() * (Ps_i - Ps_loop);
                     retrive_data_vector[k].relative_q = Rs_loop.transpose() * Rs_i;
                     retrive_data_vector[k].relative_yaw = Utility::normalizeAngle(Utility::R2ypr(Rs_i).x() - Utility::R2ypr(Rs_loop).x());
-                    if (abs(retrive_data_vector[k].relative_yaw) > 30.0 || retrive_data_vector[k].relative_t.norm() > 20.0)
-                        retrive_data_vector[k].relative_pose = false;
-                        
+
+                    if (std::abs(retrive_data_vector[k].relative_yaw) > 30.0 || retrive_data_vector[k].relative_t.norm() > 20.0)
+                        retrive_data_vector[k].relative_pose = false; 
                 }
             } 
         } 
