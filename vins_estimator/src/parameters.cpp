@@ -64,8 +64,12 @@ void readParameters(const std::string & config_file)
 		console::print_error("ERROR:Wrong path to settings: \n", config_file.c_str());
 	}
 
-	VINS_FOLDER_PATH = _getcwd(NULL, FILENAMEPATH_MAX);
+#ifdef __WIN32__
+    VINS_FOLDER_PATH = _getcwd(NULL, FILENAMEPATH_MAX);
 	console::print_info("INFO: VINS_FOLDER_PATH: %s\n", VINS_FOLDER_PATH.c_str());
+#elif __APPLE__
+    VINS_FOLDER_PATH = "/Users/xiongxinxin/Desktop/Remove_ROS_VINS/vins_estimator/src";
+#endif
 
 	VINS_FOLDER_PATH = "../../";
 	fsSettings["image_topic"] >> IMAGE_TOPIC;

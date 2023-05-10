@@ -1110,6 +1110,4 @@ void Estimator::slideWindowOld()
     }
     else
         f_manager.removeBack();
-
 }
-

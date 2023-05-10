@@ -1698,7 +1698,7 @@ Chessboard::checkBoardMonotony(std::vector<ChessboardCornerPtr>& corners,
 
             thresh *= threshFactor;
 
-            if (fminf(fabsf(splineXY(p_j.x) - p_j.y), fabsf(splineYX(p_j.y) - p_j.x)) > thresh)
+            if (std::fminf(std::fabsf(splineXY(p_j.x) - p_j.y), std::fabsf(splineYX(p_j.y) - p_j.x)) > thresh)
             {
                 return false;
             }
@@ -1753,7 +1753,7 @@ Chessboard::checkBoardMonotony(std::vector<ChessboardCornerPtr>& corners,
 
             thresh *= threshFactor;
 
-            if (fminf(fabsf(splineXY(p_i.x) - p_i.y), fabsf(splineYX(p_i.y) - p_i.x)) > thresh)
+            if (std::fminf(std::fabsf(splineXY(p_i.x) - p_i.y), std::fabsf(splineYX(p_i.y) - p_i.x)) > thresh)
             {
                 return false;
             }
