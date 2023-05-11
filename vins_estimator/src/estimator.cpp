@@ -116,78 +116,74 @@ void Estimator::processImage(const std::map<int, std::vector<std::pair<int, Eige
     all_image_frame.insert(std::make_pair(header.stamp.toSec(), imageframe));
     tmp_pre_integration = new IntegrationBase{acc_0, gyr_0, Bas[frame_count], Bgs[frame_count]};
 
-    if(ESTIMATE_EXTRINSIC == 2)
-    {
-       // ROS_INFO("calibrating extrinsic param, rotation movement is needed");
-        if (frame_count != 0)
-        {
-			std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> corres = f_manager.getCorresponding(frame_count - 1, frame_count);
+	// 初始化过程中得到相机与IMU之间的旋转外参
+    if(ESTIMATE_EXTRINSIC == 2) {
+        if (frame_count != 0) {
 			Eigen::Matrix3d calib_ric;
-            if (initial_ex_rotation.CalibrationExRotation(corres, pre_integrations[frame_count]->delta_q, calib_ric))
-            {
-          //      ROS_WARN("initial extrinsic rotation calib success");
-         //       ROS_WARN_STREAM("initial extrinsic rotation: " << endl << calib_ric);
-                ric[0] = calib_ric;
-                RIC[0] = calib_ric;
+			std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> corres = f_manager.getCorresponding(frame_count - 1, frame_count);
+            if (initial_ex_rotation.CalibrationExRotation(corres, pre_integrations[frame_count]->delta_q, calib_ric)) {
+				ric[0] = calib_ric;
+				RIC[0] = calib_ric;
                 ESTIMATE_EXTRINSIC = 1;
             }
         }
     }
 
-    if (solver_flag == INITIAL)
-    {
-        if (frame_count == WINDOW_SIZE)
-        {
-            bool result = false;
-            if( ESTIMATE_EXTRINSIC != 2 && (header.stamp.toSec() - initial_timestamp) > 0.1)
-            {
-               result = initialStructure();
-               initial_timestamp = header.stamp.toSec();
-            }
-            if(result)
-            {
-                solver_flag = NON_LINEAR;
-                solveOdometry();
-                slideWindow();
-                f_manager.removeFailures();
-           //     ROS_INFO("Initialization finish!");
-                last_R = Rs[WINDOW_SIZE];
-                last_P = Ps[WINDOW_SIZE];
-                last_R0 = Rs[0];
-                last_P0 = Ps[0];
-                
-            }
-            else
-                slideWindow();
-        }
+	// 进行前端滑窗优化
+    if (solver_flag == INITIAL) {
+		if (frame_count == WINDOW_SIZE) {
+			bool result = false;
+			if (ESTIMATE_EXTRINSIC != 2 && (header.stamp.toSec() - initial_timestamp) > 0.1) {
+				result = initialStructure();
+				initial_timestamp = header.stamp.toSec();
+			}
+			if (result) {
+				solver_flag = NON_LINEAR;
+
+				TicToc t_solve;
+				solveOdometry();
+				console::print_info("INFO: estimator solve odometry time: %d ms.\n", int(t_solve.toc()));
+
+				slideWindow();
+				f_manager.removeFailures();
+				console::print_highlight("INFO: estimator initialize success.\n");
+
+				// 优化完成后获取滑窗中第一帧与最后一帧的位姿
+				last_R = Rs[WINDOW_SIZE];
+				last_P = Ps[WINDOW_SIZE];
+				last_R0 = Rs[0];
+				last_P0 = Ps[0];
+			}
+			else
+				slideWindow();
+		}
         else
             frame_count++;
     }
-    else
-    {
-        TicToc t_solve;
-        solveOdometry();
-      //  ROS_DEBUG("solver costs: %fms", t_solve.toc());
+    else {
+		TicToc t_solve;
+		solveOdometry();
+		console::print_info("INFO: estimator solve odeometry time: %d ms.\n", int(t_solve.toc()));
 
-        if (failureDetection())
-        {
-          //  ROS_WARN("failure detection!");
-            failure_occur = 1;
-            clearState();
-            setParameter();
-        //    ROS_WARN("system reboot!");
-            return;
-        }
+		// 检测系统是否有异常存在，若存在异常则重置系统
+		if (failureDetection()) {
+			console::print_warn("WARN: estimator failure detect.\n");
+			failure_occur = 1;
+			clearState();
+			setParameter();
+			console::print_warn("WARN: eatimator system reboot.\n");
+			return;
+		}
 
-        TicToc t_margin;
         slideWindow();
-        f_manager.removeFailures();
-    //    ROS_DEBUG("marginalization costs: %fms", t_margin.toc());
-        // prepare output of VINS
+		f_manager.removeFailures();
+        
+		// 准备系统的输出数据
         key_poses.clear();
-        for (int i = 0; i <= WINDOW_SIZE; i++)
-            key_poses.push_back(Ps[i]);
+		for (int i = 0; i <= WINDOW_SIZE; i++)
+			key_poses.push_back(Ps[i]);
 
+		// 优化完成后获取滑窗中第一帧与最后一帧的位姿
         last_R = Rs[WINDOW_SIZE];
         last_P = Ps[WINDOW_SIZE];
         last_R0 = Rs[0];
@@ -198,80 +194,78 @@ void Estimator::processImage(const std::map<int, std::vector<std::pair<int, Eige
 bool Estimator::initialStructure()
 {
     TicToc t_sfm;
-    //check imu observibility
+    // 通过检查IMU数据检查系统是否有足够的运动激励
     {
-		std::map<double, ImageFrame>::iterator frame_it;
 		Eigen::Vector3d sum_g;
-        for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++)
-        {
+		std::map<double, ImageFrame>::iterator frame_it;
+		
+		// 计算IMU运动加速度均值
+        for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++) {
             double dt = frame_it->second.pre_integration->sum_dt;
 			Eigen::Vector3d tmp_g = frame_it->second.pre_integration->delta_v / dt;
             sum_g += tmp_g;
         }
 		Eigen::Vector3d aver_g;
         aver_g = sum_g * 1.0 / ((int)all_image_frame.size() - 1);
+
+		// 计算IMU运动加速度方差
         double var = 0;
-        for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++)
-        {
-            double dt = frame_it->second.pre_integration->sum_dt;
+		for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++) {
+			double dt = frame_it->second.pre_integration->sum_dt;
 			Eigen::Vector3d tmp_g = frame_it->second.pre_integration->delta_v / dt;
-            var += (tmp_g - aver_g).transpose() * (tmp_g - aver_g);
-            //cout << "frame g " << tmp_g.transpose() << endl;
-        }
-        var = sqrt(var / ((int)all_image_frame.size() - 1));
-        //ROS_WARN("IMU variation %f!", var);
-        if(var < 0.25)
-        {
-          //  ROS_INFO("IMU excitation not enouth!");
-            //return false;
-        }
+			var += (tmp_g - aver_g).transpose() * (tmp_g - aver_g);
+		}
+        var = std::sqrt(var / ((int)all_image_frame.size() - 1));
+
+		// 若IMU运动加速度方差不满足要求，则退出初始化
+		if (var < 0.25) {
+			console::print_info("INFO: estimator IMU excitation not enouth.\n");
+			return false;
+		}
     }
-    // global sfm
+
+    // 构造sfm所需的图像特征数据
+	std::vector<SFMFeature> sfm_f;
     std::vector<Eigen::Quaterniond> Q(frame_count + 1);
 	std::vector<Eigen::Vector3d> T(frame_count + 1);
-	std::map<int, Eigen::Vector3d> sfm_tracked_points;
-	std::vector<SFMFeature> sfm_f;
-    for (auto &it_per_id : f_manager.feature)
-    {
+	
+    for (auto &it_per_id : f_manager.feature) {
         int imu_j = it_per_id.start_frame - 1;
         SFMFeature tmp_feature;
-        tmp_feature.state = false;
+		tmp_feature.state = false;
         tmp_feature.id = it_per_id.feature_id;
-        for (auto &it_per_frame : it_per_id.feature_per_frame)
-        {
+        for (auto &it_per_frame : it_per_id.feature_per_frame) {
             imu_j++;
 			Eigen::Vector3d pts_j = it_per_frame.point;
-            tmp_feature.observation.push_back(std::make_pair(imu_j, Eigen::Vector2d{pts_j.x(), pts_j.y()}));
+            tmp_feature.observation.emplace_back(std::make_pair(imu_j, Eigen::Vector2d{pts_j.x(), pts_j.y()}));
         }
-		sfm_f.push_back(tmp_feature);
+		sfm_f.emplace_back(tmp_feature);
     } 
 	Eigen::Matrix3d relative_R;
 	Eigen::Vector3d relative_T;
+
+	// 寻找初始滑窗中与最新帧有足够视差和共视关系的帧ID
 	int l;
-    if (!relativePose(relative_R, relative_T, l))
-    {
-     //   ROS_INFO("Not enough features or parallax; Move device around");
-        return false;
-    }
+	if (!relativePose(relative_R, relative_T, l)) {
+		console::print_info("INFO: estimator not enough features or parallax; move device around.\n");
+		return false;
+	}
+
 	std::cout << "relative_R:" << std::endl;
-
 	std::cout << relative_R << std::endl;
-
 	std::cout << "relative_T:" << std::endl;
-
 	std::cout << relative_T << std::endl;
-
 	std::cout << "l :" << l << std::endl;
     
 	GlobalSFM sfm;
-    if(!sfm.construct(frame_count + 1, Q, T, l,
-              relative_R, relative_T,
-              sfm_f, sfm_tracked_points))
-    {
-     //   ROS_DEBUG("global SFM failed!");
-        marginalization_flag = MARGIN_OLD;
-        return false;
-    }
+	std::map<int, Eigen::Vector3d> sfm_tracked_points;
+
+	if (!sfm.construct(frame_count + 1, Q, T, l, relative_R,
+		relative_T, sfm_f, sfm_tracked_points)) {
+		console::print_info("INFO: global SFM failed.\n");
+		marginalization_flag = MARGIN_OLD;
+		return false;
+	}
 
     //solve pnp for all frame
 	std::map<double, ImageFrame>::iterator frame_it;
@@ -343,11 +337,12 @@ bool Estimator::initialStructure()
         frame_it->second.R = R_pnp * RIC[0].transpose();
         frame_it->second.T = T_pnp;
     }
-    if (visualInitialAlign())
-        return true;
-    else
-    {
-      //  ROS_INFO("misalign visual structure with IMU");
+
+	// 视觉惯导联合初始化
+	if (visualInitialAlign())
+		return true;
+    else {
+		console::print_info("INFO: estimator misalign visual structure with IMU.\n");
         return false;
     }
 
@@ -433,34 +428,32 @@ bool Estimator::visualInitialAlign()
 
 bool Estimator::relativePose(Eigen::Matrix3d &relative_R, Eigen::Vector3d &relative_T, int &l)
 {
-    // find previous frame which contians enough correspondance and parallex with newest frame
-    for (int i = 0; i < WINDOW_SIZE; i++)
-    {
+    // 在滑窗中寻找与最新帧有充足视差和共视点的图像帧
+    for (int i = 0; i < WINDOW_SIZE; i++) {
 		std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> corres;
         corres = f_manager.getCorresponding(i, WINDOW_SIZE);
-        if (corres.size() > 20)
-        {
+        if (corres.size() > 20) {
+			// 计算两帧特征间的平均视差
             double sum_parallax = 0;
             double average_parallax;
-            for (int j = 0; j < int(corres.size()); j++)
-            {
+            for (int j = 0; j < int(corres.size()); j++) {
 				Eigen::Vector2d pts_0(corres[j].first(0), corres[j].first(1));
 				Eigen::Vector2d pts_1(corres[j].second(0), corres[j].second(1));
                 double parallax = (pts_0 - pts_1).norm();
                 sum_parallax = sum_parallax + parallax;
-
             }
-            average_parallax = 1.0 * sum_parallax / int(corres.size());
-            if(average_parallax * 460 > 30 && m_estimator.solveRelativeRT(corres, relative_R, relative_T))
-            {
+
+			// 若两帧之间有充足视差且成功求解出两帧间的位姿变化则返回l
+			average_parallax = 1.0 * sum_parallax / int(corres.size());
+            if(average_parallax * 460 > 30 && m_estimator.solveRelativeRT(corres, relative_R, relative_T)) {
                 l = i;
-				console::print_info("INFO: initialize average_parallax: %d\n", average_parallax * 460);
-				console::print_info("INFO: initialize choose l: %d, corres.size(): %d\n", l, corres.size());
+				console::print_info("INFO: initialize average_parallax: %d \n", int(average_parallax * 460));
+				console::print_info("INFO: initialize choose l: %d, corres.size(): %d.\n", l, int(corres.size()));
                 return true;
             }
         }
     }
-    return false;
+	return false;
 }
 
 void Estimator::solveOdometry()

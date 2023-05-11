@@ -55,7 +55,7 @@ void FeatureTracker::setMask()
 
     forw_pts.clear();
     ids.clear();
-    track_cnt.clear();
+	track_cnt.clear();
 
 	// 均匀化当前帧的特征点，在同一区域中的特征点取被观测次数多的点
     for (auto &it : cnt_pts_id) {

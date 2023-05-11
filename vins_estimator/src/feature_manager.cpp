@@ -115,22 +115,21 @@ void FeatureManager::debugShow()
 std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> FeatureManager::getCorresponding(int frame_count_l, int frame_count_r)
 {
 	std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> corres;
-    for (auto &it : feature)
-    {
-        if (it.start_frame <= frame_count_l && it.endFrame() >= frame_count_r)
-        {
-			Eigen::Vector3d a = Eigen::Vector3d::Zero(), b = Eigen::Vector3d::Zero();
-            int idx_l = frame_count_l - it.start_frame;
-            int idx_r = frame_count_r - it.start_frame;
+	for (auto &it : feature) {
+		if (it.start_frame <= frame_count_l && it.endFrame() >= frame_count_r) {
+			Eigen::Vector3d a = Eigen::Vector3d::Zero();
+			Eigen::Vector3d b = Eigen::Vector3d::Zero();
 
-            a = it.feature_per_frame[idx_l].point;
+			int idx_l = frame_count_l - it.start_frame;
+			int idx_r = frame_count_r - it.start_frame;
 
-            b = it.feature_per_frame[idx_r].point;
-            
-			corres.push_back(std::make_pair(a, b));
-        }
-    }
-    return corres;
+			a = it.feature_per_frame[idx_l].point;
+			b = it.feature_per_frame[idx_r].point;
+
+			corres.emplace_back(std::make_pair(a, b));
+		}
+	}
+	return corres;
 }
 
 void FeatureManager::setDepth(const Eigen::VectorXd &x)

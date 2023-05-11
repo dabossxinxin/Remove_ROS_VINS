@@ -13,11 +13,11 @@
 struct SFMFeature
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+	int id;
     bool state;
-    int id;
-	std::vector<std::pair<int, Eigen::Vector2d>> observation;
-    double position[3];
     double depth;
+	double position[3];
+	std::vector<std::pair<int, Eigen::Vector2d>> observation;
 };
 
 struct ReprojectionError3D
