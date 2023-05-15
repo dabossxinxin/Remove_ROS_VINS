@@ -145,8 +145,11 @@ bool GlobalSFM::construct(int frame_num, std::vector<Eigen::Quaterniond>& q,
 		if (i > l) {
 			Eigen::Matrix3d R_initial = c_Rotation[i - 1];
 			Eigen::Vector3d P_initial = c_Translation[i - 1];
-			if (!solveFrameByPnP(R_initial, P_initial, i, sfm_f))
+			if (!solveFrameByPnP(R_initial, P_initial, i, sfm_f)) {
+				console::print_warn("WARN: initial_sfm solvePnP failed.\n");
 				return false;
+			}
+				
 
 			c_Rotation[i] = R_initial;
 			c_Translation[i] = P_initial;
@@ -154,19 +157,21 @@ bool GlobalSFM::construct(int frame_num, std::vector<Eigen::Quaterniond>& q,
 			Pose[i].block<3, 3>(0, 0) = c_Rotation[i];
 			Pose[i].block<3, 1>(0, 3) = c_Translation[i];
 		}
-		
+
 		triangulateTwoFrames(i, Pose[i], frame_num - 1, Pose[frame_num - 1], sfm_f);
 	}
-	
+
 	for (int i = l + 1; i < frame_num - 1; i++)
 		triangulateTwoFrames(l, Pose[l], i, Pose[i], sfm_f);
-	
+
 	// 恢复0~l-1帧的相机姿态以及路标点坐标
-	for (int i = l - 1; i >= 0; --i){
+	for (int i = l - 1; i >= 0; --i) {
 		Eigen::Matrix3d R_initial = c_Rotation[i + 1];
 		Eigen::Vector3d P_initial = c_Translation[i + 1];
-		if (!solveFrameByPnP(R_initial, P_initial, i, sfm_f))
+		if (!solveFrameByPnP(R_initial, P_initial, i, sfm_f)) {
+			console::print_warn("WARN: initial_sfm solvePnP failed.\n");
 			return false;
+		}
 
 		c_Rotation[i] = R_initial;
 		c_Translation[i] = P_initial;
@@ -228,6 +233,8 @@ bool GlobalSFM::construct(int frame_num, std::vector<Eigen::Quaterniond>& q,
 		if (sfm_f[i].state != true)
 			continue;
 
+		problem.AddParameterBlock(sfm_f[i].position, 3);
+
 		for (int j = 0; j < int(sfm_f[i].observation.size()); j++) {
 			int index = sfm_f[i].observation[j].first;
 			ceres::CostFunction* cost_function = ReprojectionError3D::Create(
@@ -250,7 +257,7 @@ bool GlobalSFM::construct(int frame_num, std::vector<Eigen::Quaterniond>& q,
 		console::print_info("INFO: initial sfm vision only BA converge.\n");
 	}
 	else {
-		console::print_info("INFO: initial sfm vision only BA not converge.\n");
+		console::print_warn("WARN: initial sfm vision only BA not converge.\n");
 		return false;
 	}
 

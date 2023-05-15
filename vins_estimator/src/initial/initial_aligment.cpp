@@ -1,4 +1,5 @@
 #include "initial_alignment.h"
+#include "../utility/print.h"
 
 void solveGyroscopeBias(std::map<double, ImageFrame> &all_image_frame, Eigen::Vector3d* Bgs)
 {
@@ -24,19 +25,16 @@ void solveGyroscopeBias(std::map<double, ImageFrame> &all_image_frame, Eigen::Ve
 
     }
     delta_bg = A.ldlt().solve(b);
-  //  ROS_WARN_STREAM("gyroscope bias initial calibration " << delta_bg.transpose());
-	std::cout << "gyroscope bias initial calibration " << delta_bg.transpose() << std::endl;
+	console::print_highlight("gyroscope bias initial calibraion [%f,%f,%f].\n", delta_bg(0), delta_bg(1), delta_bg(2));
 
     for (int i = 0; i <= WINDOW_SIZE; i++)
         Bgs[i] += delta_bg;
 
-    for (frame_i = all_image_frame.begin(); next(frame_i) != all_image_frame.end( ); frame_i++)
-    {
+    for (frame_i = all_image_frame.begin(); next(frame_i) != all_image_frame.end( ); frame_i++) {
         frame_j = next(frame_i);
-        frame_j->second.pre_integration->repropagate(Eigen::Vector3d::Zero(), Bgs[0]);
+		frame_j->second.pre_integration->repropagate(Eigen::Vector3d::Zero(), Bgs[0]);
     }
 }
-
 
 Eigen::MatrixXd TangentBasis(Eigen::Vector3d &g0)
 {
@@ -57,7 +55,7 @@ void RefineGravity(std::map<double, ImageFrame> &all_image_frame, Eigen::Vector3
 {
 	Eigen::Vector3d g0 = g.normalized() * G.norm();
 	Eigen::Vector3d lx, ly;
-    //VectorXd x;
+
     int all_frame_count = all_image_frame.size();
     int n_state = all_frame_count * 3 + 2 + 1;
 
@@ -84,7 +82,6 @@ void RefineGravity(std::map<double, ImageFrame> &all_image_frame, Eigen::Vector3
 
 			double dt = frame_j->second.pre_integration->sum_dt;
 
-
 			tmp_A.block<3, 3>(0, 0) = -dt * Eigen::Matrix3d::Identity();
 			tmp_A.block<3, 2>(0, 6) = frame_i->second.R.transpose() * dt * dt / 2 * Eigen::Matrix3d::Identity() * lxly;
 			tmp_A.block<3, 1>(0, 8) = frame_i->second.R.transpose() * (frame_j->second.T - frame_i->second.T) / 100.0;
@@ -94,7 +91,6 @@ void RefineGravity(std::map<double, ImageFrame> &all_image_frame, Eigen::Vector3
 			tmp_A.block<3, 3>(3, 3) = frame_i->second.R.transpose() * frame_j->second.R;
 			tmp_A.block<3, 2>(3, 6) = frame_i->second.R.transpose() * dt * Eigen::Matrix3d::Identity() * lxly;
 			tmp_b.block<3, 1>(3, 0) = frame_j->second.pre_integration->delta_v - frame_i->second.R.transpose() * dt * Eigen::Matrix3d::Identity() * g0;
-
 
 			Eigen::Matrix<double, 6, 6> cov_inv = Eigen::Matrix<double, 6, 6>::Zero();
 			//cov.block<6, 6>(0, 0) = IMU_cov[i + 1];
@@ -118,15 +114,14 @@ void RefineGravity(std::map<double, ImageFrame> &all_image_frame, Eigen::Vector3
 		x = A.ldlt().solve(b);
 		Eigen::VectorXd dg = x.segment<2>(n_state - 3);
 		g0 = (g0 + lxly * dg).normalized() * G.norm();
-		//double s = x(n_state - 1);
 	}
     g = g0;
 }
 
 bool LinearAlignment(std::map<double, ImageFrame> &all_image_frame, Eigen::Vector3d &g, Eigen::VectorXd &x)
 {
-    int all_frame_count = all_image_frame.size();
-    int n_state = all_frame_count * 3 + 3 + 1;
+	int all_frame_count = all_image_frame.size();
+	int n_state = all_frame_count * 3 + 3 + 1;
 
 	Eigen::MatrixXd A{n_state, n_state};
     A.setZero();
@@ -178,21 +173,20 @@ bool LinearAlignment(std::map<double, ImageFrame> &all_image_frame, Eigen::Vecto
     A = A * 1000.0;
     b = b * 1000.0;
     x = A.ldlt().solve(b);
-    double s = x(n_state - 1) / 100.0;
-  //  ROS_DEBUG("estimated scale: %f", s);
-    g = x.segment<3>(n_state - 4);
-    //ROS_DEBUG_STREAM(" result g     " << g.norm() << " " << g.transpose());
-	std::cout << " result g     " << g.norm() << " " << g.transpose() << std::endl;
-    if(fabs(g.norm() - G.norm()) > 1.0 || s < 0)
-    {
+	double s = x(n_state - 1) / 100.0;
+	g = x.segment<3>(n_state - 4);
+	console::print_highlight("result s: %f.\n", s);
+	console::print_highlight("result G: %f:[%f,%f,%f].\n", g.norm(), g(0), g(1), g(2));
+    if(std::fabs(g.norm() - G.norm()) > 1.0 || s < 0) {
         return false;
     }
 
     RefineGravity(all_image_frame, g, x);
-    s = (x.tail<1>())(0) / 100.0;
-    (x.tail<1>())(0) = s;
-  //  ROS_DEBUG_STREAM(" refine     " << g.norm() << " " << g.transpose());
-	std::cout << " refine     " << g.norm() << " " << g.transpose() << std::endl;
+	s = (x.tail<1>())(0) / 100.0;
+	(x.tail<1>())(0) = s;
+	console::print_highlight("refine s: %f.\n", s);
+	console::print_highlight("refine G: %f:[%f,%f,%f].\n", g.norm(), g(0), g(1), g(2));
+
     if(s < 0.0 )
         return false;   
     else
@@ -201,7 +195,7 @@ bool LinearAlignment(std::map<double, ImageFrame> &all_image_frame, Eigen::Vecto
 
 bool VisualIMUAlignment(std::map<double, ImageFrame> &all_image_frame, Eigen::Vector3d* Bgs, Eigen::Vector3d &g, Eigen::VectorXd &x)
 {
-    solveGyroscopeBias(all_image_frame, Bgs);
+	solveGyroscopeBias(all_image_frame, Bgs);
 
     if(LinearAlignment(all_image_frame, g, x))
         return true;
