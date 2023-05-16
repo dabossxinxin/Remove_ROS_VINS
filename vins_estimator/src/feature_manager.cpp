@@ -8,14 +8,13 @@ int FeaturePerId::endFrame()
 FeatureManager::FeatureManager(Eigen::Matrix3d _Rs[])
     : Rs(_Rs)
 {
-    for (int i = 0; i < NUM_OF_CAM; i++)
+    for (int i = 0; i < NUM_OF_CAM; ++i)
         ric[i].setIdentity();
 }
 
 void FeatureManager::setRic(Eigen::Matrix3d _ric[])
 {
-    for (int i = 0; i < NUM_OF_CAM; i++)
-    {
+    for (int i = 0; i < NUM_OF_CAM; ++i) {
         ric[i] = _ric[i];
     }
 }
@@ -37,7 +36,6 @@ int FeatureManager::getFeatureCount()
     return cnt;
 }
 
-
 bool FeatureManager::addFeatureCheckParallax(int frame_count, const std::map<int, std::vector<std::pair<int, Eigen::Vector3d>>> &image)
 {
     double parallax_sum = 0;
@@ -54,11 +52,11 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const std::map<int
 		});
 
         if (it == feature.end()) {
-			feature.push_back(FeaturePerId(feature_id, frame_count));
-			feature.back().feature_per_frame.push_back(f_per_fra);
+			feature.emplace_back(FeaturePerId(feature_id, frame_count));
+			feature.back().feature_per_frame.emplace_back(f_per_fra);
         }
         else if (it->feature_id == feature_id) {
-            it->feature_per_frame.push_back(f_per_fra);
+            it->feature_per_frame.emplace_back(f_per_fra);
             last_track_num++;
         }
     }
@@ -84,28 +82,25 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const std::map<int
         return parallax_sum / parallax_num >= MIN_PARALLAX;
 }
 
-void FeatureManager::debugShow()
-{
-  //  ROS_DEBUG("debug show");
-    for (auto &it : feature)
-    {
-    //    ROS_ASSERT(it.feature_per_frame.size() != 0);
-     //   ROS_ASSERT(it.start_frame >= 0);
-     //   ROS_ASSERT(it.used_num >= 0);
-      assert(it.feature_per_frame.size() != 0);
-      assert(it.start_frame >= 0);
-      assert(it.used_num >= 0);
+void FeatureManager::debugShow() {
+    //ROS_DEBUG("debug show");
+    for (auto &it: feature) {
+        //ROS_ASSERT(it.feature_per_frame.size() != 0);
+        //ROS_ASSERT(it.start_frame >= 0);
+        //ROS_ASSERT(it.used_num >= 0);
+        assert(it.feature_per_frame.size() != 0);
+        assert(it.start_frame >= 0);
+        assert(it.used_num >= 0);
 
-    //    ROS_DEBUG("%d,%d,%d ", it.feature_id, it.used_num, it.start_frame);
+        //ROS_DEBUG("%d,%d,%d ", it.feature_id, it.used_num, it.start_frame);
         int sum = 0;
-        for (auto &j : it.feature_per_frame)
-        {
-        //    ROS_DEBUG("%d,", int(j.is_used));
+        for (auto &j: it.feature_per_frame) {
+            //ROS_DEBUG("%d,", int(j.is_used));
             sum += j.is_used;
-            printf("(%lf,%lf) ",j.point(0), j.point(1));
+            printf("(%lf,%lf) ", j.point(0), j.point(1));
         }
-       assert(it.used_num == sum);
-   //     ROS_ASSERT(it.used_num == sum);
+        assert(it.used_num == sum);
+        //ROS_ASSERT(it.used_num == sum);
     }
 }
 
@@ -140,20 +135,19 @@ void FeatureManager::setDepth(const Eigen::VectorXd &x)
 
         it_per_id.estimated_depth = 1.0 / x(++feature_index);
         //ROS_INFO("feature id %d , start_frame %d, depth %f ", it_per_id->feature_id, it_per_id-> start_frame, it_per_id->estimated_depth);
-        if (it_per_id.estimated_depth < 0)
-        {
+        if (it_per_id.estimated_depth < 0) {
             it_per_id.solve_flag = 2;
         }
-        else
+        else {
             it_per_id.solve_flag = 1;
+        }
     }
 }
 
 void FeatureManager::removeFailures()
 {
     for (auto it = feature.begin(), it_next = feature.begin();
-         it != feature.end(); it = it_next)
-    {
+         it != feature.end(); it = it_next) {
         it_next++;
 		if (it->solve_flag == 2)
 			feature.erase(it);
@@ -247,12 +241,10 @@ void FeatureManager::removeOutlier()
   //  ROS_BREAK();
     int i = -1;
     for (auto it = feature.begin(), it_next = feature.begin();
-         it != feature.end(); it = it_next)
-    {
+         it != feature.end(); it = it_next) {
         it_next++;
         i += it->used_num != 0;
-        if (it->used_num != 0 && it->is_outlier == true)
-        {
+        if (it->used_num != 0 && it->is_outlier == true) {
             feature.erase(it);
         }
     }

@@ -580,47 +580,33 @@ void Estimator::double2vector()
 
 bool Estimator::failureDetection()
 {
-    if (f_manager.last_track_num < 2)
-    {
-     //   ROS_INFO(" little feature %d", f_manager.last_track_num);
+    if (f_manager.last_track_num < 2) {
+        console::print_error("little feature: %d.\n", f_manager.last_track_num);
         return true;
     }
-    if (Bas[WINDOW_SIZE].norm() > 2.5)
-    {
-     //   ROS_INFO(" big IMU acc bias estimation %f", Bas[WINDOW_SIZE].norm());
+    if (Bas[WINDOW_SIZE].norm() > 2.5) {
+        console::print_error("big IMU acc bias estimation %f.\n", Bas[WINDOW_SIZE].norm());
         return true;
     }
-    if (Bgs[WINDOW_SIZE].norm() > 1.0)
-    {
-   //     ROS_INFO(" big IMU gyr bias estimation %f", Bgs[WINDOW_SIZE].norm());
+    if (Bgs[WINDOW_SIZE].norm() > 1.0) {
+        console::print_error("big IMU gyr bias estimation %f.\n", Bgs[WINDOW_SIZE].norm());
         return true;
     }
-    /*
-    if (tic(0) > 1)
-    {
-        ROS_INFO(" big extri param estimation %d", tic(0) > 1);
-        return true;
-    }
-    */
 	Eigen::Vector3d tmp_P = Ps[WINDOW_SIZE];
-    if ((tmp_P - last_P).norm() > 5)
-    {
-     //   ROS_INFO(" big translation");
+    if ((tmp_P - last_P).norm() > 5) {
+        console::print_error("big translation detect.\n");
         return true;
     }
-    if (abs(tmp_P.z() - last_P.z()) > 1)
-    {
-    //    ROS_INFO(" big z translation");
+    if (std::abs(tmp_P.z() - last_P.z()) > 1) {
+        console::print_error("big z translation detect.\n");
         return true; 
     }
 	Eigen::Matrix3d tmp_R = Rs[WINDOW_SIZE];
 	Eigen::Matrix3d delta_R = tmp_R.transpose() * last_R;
 	Eigen::Quaterniond delta_Q(delta_R);
-    double delta_angle;
-    delta_angle = acos(delta_Q.w()) * 2.0 / 3.14 * 180.0;
-    if (delta_angle > 50)
-    {
-       // ROS_INFO(" big delta_angle ");
+    double delta_angle = acos(delta_Q.w()) * 2.0 / 3.14 * 180.0;
+    if (std::abs(delta_angle) > 50) {
+        console::print_error("big delta_angle detect.\n");
         return true;
     }
     return false;
