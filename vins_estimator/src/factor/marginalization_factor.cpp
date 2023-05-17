@@ -264,7 +264,7 @@ void MarginalizationInfo::marginalize()
 		//console::print_info("A diff %f, b diff %f.\n", (A - tmp_A).sum(), (b - tmp_b).sum());
 	}
 
-    //TODO
+	TicToc t_margin_inv;
 	Eigen::MatrixXd Amm = 0.5 * (A.block(0, 0, m, m) + A.block(0, 0, m, m).transpose());
 	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> saes(Amm);
 
@@ -276,8 +276,8 @@ void MarginalizationInfo::marginalize()
     Eigen::VectorXd bmm = b.segment(0, m);
     Eigen::MatrixXd Amr = A.block(0, m, m, n);
     Eigen::MatrixXd Arm = A.block(m, 0, n, m);
-    Eigen::MatrixXd Arr = A.block(m, m, n, n);
-    Eigen::VectorXd brr = b.segment(m, n);
+	Eigen::MatrixXd Arr = A.block(m, m, n, n);
+	Eigen::VectorXd brr = b.segment(m, n);
 	A = Arr - Arm * Amm_inv * Amr;
 	b = brr - Arm * Amm_inv * bmm;
 
@@ -285,13 +285,14 @@ void MarginalizationInfo::marginalize()
 	Eigen::VectorXd S = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array(), 0));
 	Eigen::VectorXd S_inv = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array().inverse(), 0));
 
-    Eigen::VectorXd S_sqrt = S.cwiseSqrt();
-    Eigen::VectorXd S_inv_sqrt = S_inv.cwiseSqrt();
+	Eigen::VectorXd S_sqrt = S.cwiseSqrt();
+	Eigen::VectorXd S_inv_sqrt = S_inv.cwiseSqrt();
 
-    linearized_jacobians = S_sqrt.asDiagonal() * saes2.eigenvectors().transpose();
+	linearized_jacobians = S_sqrt.asDiagonal() * saes2.eigenvectors().transpose();
     linearized_residuals = S_inv_sqrt.asDiagonal() * saes2.eigenvectors().transpose() * b;
 	//console::print_info("error: %f %f.\n", (linearized_jacobians.transpose()*linearized_jacobians - A).sum(),
 	//	(linearized_jacobians.transpose()*linearized_residuals - b).sum());
+	console::print_info("INFO: marginalization margin inverse: %d ms.\n", int(t_margin_inv.toc()));
 }
 
 std::vector<double *> MarginalizationInfo::getParameterBlocks(std::unordered_map<long, double*> &addr_shift)
@@ -318,8 +319,8 @@ MarginalizationFactor::MarginalizationFactor(MarginalizationInfo* _marginalizati
 	:marginalization_info(_marginalization_info)
 {
     int cnt = 0;
-    for (auto it : marginalization_info->keep_block_size) {
-        mutable_parameter_block_sizes()->push_back(it);
+    for (const auto& it : marginalization_info->keep_block_size) {
+        mutable_parameter_block_sizes()->emplace_back(it);
         cnt += it;
     }
     //printf("residual size: %d, %d\n", cnt, n);
@@ -328,14 +329,16 @@ MarginalizationFactor::MarginalizationFactor(MarginalizationInfo* _marginalizati
 
 bool MarginalizationFactor::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
 {
-    //printf("internal addr,%d, %d\n", (int)parameter_block_sizes().size(), num_residuals());
-    //for (int i = 0; i < static_cast<int>(keep_block_size.size()); i++)
-    //{
-    //    //printf("unsigned %x\n", reinterpret_cast<unsigned long>(parameters[i]));
-    //    //printf("signed %x\n", reinterpret_cast<long>(parameters[i]));
-    //printf("jacobian %x\n", reinterpret_cast<long>(jacobians));
-    //printf("residual %x\n", reinterpret_cast<long>(residuals));
-    //}
+    /*printf("internal addr,%d, %d\n", (int)parameter_block_sizes().size(), num_residuals());
+	for (int i = 0; i < static_cast<int>(keep_block_size.size()); i++)
+	{
+		printf("unsigned %x\n", reinterpret_cast<unsigned long>(parameters[i]));
+		printf("signed %x\n", reinterpret_cast<long>(parameters[i]));
+		printf("jacobian %x\n", reinterpret_cast<long>(jacobians));
+		printf("residual %x\n", reinterpret_cast<long>(residuals));
+	}*/
+
+	// 计算边缘化后相同优化变量不同线性化点的dx
     int n = marginalization_info->n;
     int m = marginalization_info->m;
     Eigen::VectorXd dx(n);
@@ -356,6 +359,7 @@ bool MarginalizationFactor::Evaluate(double const *const *parameters, double *re
         }
     }
 
+	// 计算边缘化后优化变量变化后新的残差
 	Eigen::Map<Eigen::VectorXd>(residuals, n) = marginalization_info->linearized_residuals + marginalization_info->linearized_jacobians * dx;
     if (jacobians) {
         for (int i = 0; i < static_cast<int>(marginalization_info->keep_block_size.size()); ++i) {
@@ -364,7 +368,7 @@ bool MarginalizationFactor::Evaluate(double const *const *parameters, double *re
 				int local_size = marginalization_info->localSize(size);
 				int idx = marginalization_info->keep_block_idx[i] - m;
                 Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> jacobian(jacobians[i], n, size);
-                jacobian.setZero();
+				jacobian.setZero();
 				jacobian.leftCols(local_size) = marginalization_info->linearized_jacobians.middleCols(idx, local_size);
             }
         }

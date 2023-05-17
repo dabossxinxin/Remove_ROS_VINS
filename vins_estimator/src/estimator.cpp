@@ -622,7 +622,7 @@ void Estimator::optimization()
 	// 添加优化量P、V、Q、Ba、Bg
     for (int i = 0; i < WINDOW_SIZE + 1; ++i) {
         ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
-        problem.AddParameterBlock(para_Pose[i], SIZE_POSE, local_parameterization);
+		problem.AddParameterBlock(para_Pose[i], SIZE_POSE, local_parameterization);
 		problem.AddParameterBlock(para_SpeedBias[i], SIZE_SPEEDBIAS);
     }
 
@@ -666,6 +666,9 @@ void Estimator::optimization()
 
 		int imu_i = it_per_id.start_frame;
 		int imu_j = imu_i - 1;
+
+		//problem.AddParameterBlock(para_Feature[feature_index], SIZE_FEATURE);
+		//problem.SetParameterBlockConstant(para_Feature[feature_index]);
         
 		Eigen::Vector3d pts_i = it_per_id.feature_per_frame[0].point;
 
@@ -743,9 +746,23 @@ void Estimator::optimization()
         options.max_solver_time_in_seconds = SOLVER_TIME * 4.0 / 5.0;
     else
         options.max_solver_time_in_seconds = SOLVER_TIME;
+
+	/*Eigen::VectorXd dep = f_manager.getDepthVector();
+	for (int i = 0; i < f_manager.getFeatureCount(); i++)
+		dep(i) = para_Feature[i][0];
+	f_manager.setDepth(dep);
+	std::cout << "before optimize: " << std::endl << dep << std::endl;*/
+
     TicToc t_solver;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
+
+	/*dep = f_manager.getDepthVector();
+	for (int i = 0; i < f_manager.getFeatureCount(); i++)
+		dep(i) = para_Feature[i][0];
+	f_manager.setDepth(dep);
+	std::cout << "after optimize: " << std::endl << dep << std::endl;*/
+
     //cout << summary.BriefReport() << endl;
 	console::print_highlight("optimize iterations: %d, solver costs: %d ms.\n",
 		int(summary.iterations.size()), int(t_solver.toc()));
@@ -821,7 +838,7 @@ void Estimator::optimization()
 				ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(imu_factor, NULL,
 					std::vector<double *>{para_Pose[0], para_SpeedBias[0], para_Pose[1], para_SpeedBias[1]},
 					std::vector<int>{0, 1});
-                marginalization_info->addResidualBlockInfo(residual_block_info);
+				marginalization_info->addResidualBlockInfo(residual_block_info);
             }
         }
 
@@ -835,6 +852,7 @@ void Estimator::optimization()
 
                 ++feature_index;
 
+				// 只取第0帧观测到的特征点
 				int imu_i = it_per_id.start_frame;
 				int imu_j = imu_i - 1;
                 if (imu_i != 0)
@@ -861,11 +879,11 @@ void Estimator::optimization()
 		marginalization_info->preMarginalize();
         //ROS_DEBUG("pre marginalization %f ms", t_pre_margin.toc());
 
-        
         TicToc t_margin;
 		marginalization_info->marginalize();
 		//ROS_DEBUG("marginalization %f ms", t_margin.toc());
 
+		// 此处提前占位
 		std::unordered_map<long, double*> addr_shift;
         for (int i = 1; i <= WINDOW_SIZE; i++) {
             addr_shift[reinterpret_cast<long>(para_Pose[i])] = para_Pose[i - 1];
@@ -874,12 +892,12 @@ void Estimator::optimization()
         for (int i = 0; i < NUM_OF_CAM; i++)
             addr_shift[reinterpret_cast<long>(para_Ex_Pose[i])] = para_Ex_Pose[i];
 
-		std::vector<double*> parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
+		auto& parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
 
 		if (last_marginalization_info)
 			delete last_marginalization_info;
-		last_marginalization_info = marginalization_info;
-		last_marginalization_parameter_blocks = parameter_blocks;
+		last_marginalization_info = std::move(marginalization_info);
+		last_marginalization_parameter_blocks = std::move(parameter_blocks);
     }
     else {
         if (last_marginalization_info &&
@@ -917,10 +935,11 @@ void Estimator::optimization()
             marginalization_info->marginalize();
 			//ROS_DEBUG("marginalization, %f ms", t_margin.toc());
             
+			// 此处提前占位
 			std::unordered_map<long, double*> addr_shift;
             for (int i = 0; i <= WINDOW_SIZE; ++i) {
-                if (i == WINDOW_SIZE - 1)
-                    continue;
+				if (i == WINDOW_SIZE - 1)
+					continue;
                 else if (i == WINDOW_SIZE) {
                     addr_shift[reinterpret_cast<long>(para_Pose[i])] = para_Pose[i - 1];
                     addr_shift[reinterpret_cast<long>(para_SpeedBias[i])] = para_SpeedBias[i - 1];
@@ -930,14 +949,14 @@ void Estimator::optimization()
                     addr_shift[reinterpret_cast<long>(para_SpeedBias[i])] = para_SpeedBias[i];
                 }
             }
-            for (int i = 0; i < NUM_OF_CAM; i++)
-                addr_shift[reinterpret_cast<long>(para_Ex_Pose[i])] = para_Ex_Pose[i];
+			for (int i = 0; i < NUM_OF_CAM; i++)
+				addr_shift[reinterpret_cast<long>(para_Ex_Pose[i])] = para_Ex_Pose[i];
 
-			std::vector<double*> parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
+			auto& parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
             if (last_marginalization_info)
                 delete last_marginalization_info;
-			last_marginalization_info = marginalization_info;
-			last_marginalization_parameter_blocks = parameter_blocks;
+			last_marginalization_info = std::move(marginalization_info);
+			last_marginalization_parameter_blocks = std::move(parameter_blocks);
         }
     }
 	//ROS_DEBUG("whole marginalization costs: %f", t_whole_marginalization.toc());
@@ -982,16 +1001,16 @@ void Estimator::slideWindow()
             if (true || solver_flag == INITIAL) {
                 double t_0 = Headers[0].stamp.toSec();
 				std::map<double, ImageFrame>::iterator it_0;
-                it_0 = all_image_frame.find(t_0);
+				it_0 = all_image_frame.find(t_0);
                 delete it_0->second.pre_integration;
-                all_image_frame.erase(all_image_frame.begin(), it_0);
+				all_image_frame.erase(all_image_frame.begin(), it_0);
             }
 			slideWindowOld();
         }
     }
     else {
         if (frame_count == WINDOW_SIZE) {
-            for (unsigned int i = 0; i < dt_buf[frame_count].size(); i++) {
+            for (unsigned int i = 0; i < dt_buf[frame_count].size(); ++i) {
                 double tmp_dt = dt_buf[frame_count][i];
 				Eigen::Vector3d tmp_linear_acceleration = linear_acceleration_buf[frame_count][i];
 				Eigen::Vector3d tmp_angular_velocity = angular_velocity_buf[frame_count][i];
