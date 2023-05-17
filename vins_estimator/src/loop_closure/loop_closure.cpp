@@ -24,14 +24,12 @@ void LoopClosure::initCameraModel(const std::string &calib_file)
 bool LoopClosure::startLoopClosure(std::vector<cv::KeyPoint> &keys, std::vector<BRIEF::bitset> &descriptors,
 	std::vector<cv::Point2f> &cur_pts, std::vector<cv::Point2f> &old_pts, int &old_index)
 {
-	try
-	{
+	try {
 		bool loop_succ = false;
 		loop_succ = demo.run("BRIEF", keys, descriptors, cur_pts, old_pts, old_index);
 		return loop_succ;
 	}
-	catch (const std::string &ex)
-	{
+	catch (const std::string &ex) {
 		console::print_error("Error: %s\n", ex.c_str());
 		return false;
 	}

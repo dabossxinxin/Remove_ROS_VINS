@@ -75,7 +75,7 @@ void KeyFrameDatabase::add(KeyFrame* pKF)
 {
 	console::print_info("INFO: add keyframe begin.\n");
 	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
-	keyFrameList.push_back(pKF);
+	keyFrameList.emplace_back(pKF);
 	lock.unlock();
 
 	Eigen::Vector3d P;
@@ -130,7 +130,7 @@ void KeyFrameDatabase::add(KeyFrame* pKF)
 	// TODO: 这里要不要加上目前存疑
 	/*std::unique_lock<std::mutex> mPath(mPath);
 	refine_path.header = odometry.header;
-	refine_path.poses.push_back(pose_stamped);
+	refine_path.poses.emplace_back(pose_stamped);
 	mPath.unlock();*/
 	console::print_info("INFO: add keyframe end.\n");
 }
@@ -155,14 +155,12 @@ void KeyFrameDatabase::downsample(std::vector<int> &erase_index)
 			double dis = (tmp_t - last_P).norm();
 
 			// 关键帧中的第一帧/运动距离大于最小距离/当前帧存在闭环
-		    if(it == keyFrameList.begin() || dis > min_dis || (*it)->has_loop || (*it)->is_looped)
-		    {
+		    if(it == keyFrameList.begin() || dis > min_dis || (*it)->has_loop || (*it)->is_looped) {
 		    	last_P = tmp_t;
 		    	it++;
 		    }
-		    else
-		    {
-				erase_index.push_back((*it)->global_index);
+		    else {
+				erase_index.emplace_back((*it)->global_index);
 				delete (*it);
 				it = keyFrameList.erase(it);
 		    }
@@ -200,9 +198,8 @@ void KeyFrameDatabase::getKeyframeIndexList(std::vector<int> &keyframe_index_lis
 {
 	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
 	std::list<KeyFrame*>::iterator it = keyFrameList.begin();
-	for (; it != keyFrameList.end(); it++)   
-	{
-		keyframe_index_list.push_back((*it)->global_index);
+	for (; it != keyFrameList.end(); ++it) {
+		keyframe_index_list.emplace_back((*it)->global_index);
 	}
 	return;
 }
@@ -211,8 +208,7 @@ KeyFrame* KeyFrameDatabase::getKeyframe(int index)
 {
 	std::unique_lock<std::mutex> lock(mMutexkeyFrameList);
 	std::list<KeyFrame*>::iterator it = keyFrameList.begin();
-	for (; it != keyFrameList.end(); it++)   
-	{
+	for (; it != keyFrameList.end(); ++it) {
 		if ((*it)->global_index == index) {
 			break;
 		}
@@ -475,7 +471,7 @@ void KeyFrameDatabase::updateVisualization()
 		pose_stamped.header = odometry.header;
 		pose_stamped.pose = odometry.pose.pose;
 		refine_path.header = odometry.header;
-		refine_path.poses.push_back(pose_stamped);
+		refine_path.poses.emplace_back(pose_stamped);
 	}
 	console::print_info("update visualization end.\n");
 }

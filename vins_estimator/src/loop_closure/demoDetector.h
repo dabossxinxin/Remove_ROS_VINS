@@ -237,8 +237,8 @@ const
 		if (!f.eof() && !s.empty())
 		{
 			sscanf(s.c_str(), "%lf, %lf, %lf, %lf", &ts, &x, &y, &t);
-			xs.push_back(x);
-			ys.push_back(y);
+			xs.emplace_back(x);
+			ys.emplace_back(y);
 		}
 	}
 

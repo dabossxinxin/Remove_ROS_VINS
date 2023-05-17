@@ -28,9 +28,9 @@ class IntegrationBase
 
     void push_back(double dt, const Eigen::Vector3d &acc, const Eigen::Vector3d &gyr)
     {
-        dt_buf.push_back(dt);
-        acc_buf.push_back(acc);
-        gyr_buf.push_back(gyr);
+        dt_buf.emplace_back(dt);
+        acc_buf.emplace_back(acc);
+        gyr_buf.emplace_back(gyr);
         propagate(dt, acc, gyr);
     }
 

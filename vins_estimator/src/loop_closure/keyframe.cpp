@@ -37,7 +37,7 @@ KeyFrame::KeyFrame(double _header, Eigen::Vector3d _vio_T_w_i, Eigen::Matrix3d _
 	vio_T_w_i = _vio_T_w_i;
 	vio_R_w_i = _vio_R_w_i;
 
-	// ÓÃÓÚÔÚÏÔÊ¾´°ÌåÖÐ»æÖÆÂ·±êµãÐÅÏ¢
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
 	relocalize_t = _relocalize_t;
 	relocalize_r = _relocalize_r;
 }
@@ -49,8 +49,8 @@ void KeyFrame::extractBrief(cv::Mat &image)
     int start = keypoints.size() - measurements.size();
     for(int i = 0; i< (int)measurements.size(); i++)
     {
-        window_keypoints.push_back(keypoints[start + i]);
-		window_descriptors.push_back(descriptors[start + i]);
+        window_keypoints.emplace_back(keypoints[start + i]);
+		window_descriptors.emplace_back(descriptors[start + i]);
     }
 }
 
@@ -70,12 +70,12 @@ void KeyFrame::buildKeyFrameFeatures(Estimator &estimator, const camodocal::Came
 			Eigen::Vector3d point = it_per_id.feature_per_frame[0].point;
 			Eigen::Vector2d point_uv;
 			m_camera->spaceToPlane(point, point_uv);
-			measurements.push_back(cv::Point2f(point_uv.x(), point_uv.y()));
-			pts_normalize.push_back(cv::Point2f(point.x() / point.z(), point.y() / point.z()));
-			features_id.push_back(it_per_id.feature_id);
+			measurements.emplace_back(cv::Point2f(point_uv.x(), point_uv.y()));
+			pts_normalize.emplace_back(cv::Point2f(point.x() / point.z(), point.y() / point.z()));
+			features_id.emplace_back(it_per_id.feature_id);
 
 			Eigen::Vector3d pts_i = it_per_id.feature_per_frame[0].point * it_per_id.estimated_depth;
-			point_clouds.push_back(estimator.Rs[it_per_id.start_frame] * (qic * pts_i + tic) + estimator.Ps[it_per_id.start_frame]);
+			point_clouds.emplace_back(estimator.Rs[it_per_id.start_frame] * (qic * pts_i + tic) + estimator.Ps[it_per_id.start_frame]);
 		}
 	}
 }
@@ -101,7 +101,7 @@ bool KeyFrame::searchInAera(cv::Point2f center_cur, float area_size,
 	int bestIndex = -1;
 	for (int i = 0; i < (int)descriptors_old.size(); i++)
 	{
-		// ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó±ï¿½ï¿½ï¿½Æ¥ï¿½ï¿½Ä¹ï¿½ï¿½ï¿?
+		// ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó±ï¿½ï¿½ï¿½Æ¥ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½?
 		if (!inAera(keypoints_old[i].pt, center_cur, area_size)) 
 		{
 			continue;
@@ -141,7 +141,7 @@ void KeyFrame::FundmantalMatrixRANSAC(std::vector<cv::Point2f> &measurements_old
 			un_measurements[i] = cv::Point2f(tmp_p.x(), tmp_p.y());
 
 			m_camera->liftProjective(Eigen::Vector2d(measurements_old[i].x, measurements_old[i].y), tmp_p);
-			measurements_old_norm.push_back(cv::Point2f(tmp_p.x() / tmp_p.z(), tmp_p.y() / tmp_p.z()));
+			measurements_old_norm.emplace_back(cv::Point2f(tmp_p.x() / tmp_p.z(), tmp_p.y() / tmp_p.z()));
 			tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
 			tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;
 			un_measurements_old[i] = cv::Point2f(tmp_p.x(), tmp_p.y());
@@ -169,10 +169,10 @@ void KeyFrame::searchByDes(std::vector<cv::Point2f> &measurements_old,
 	{
 		cv::Point2f pt(0.f, 0.f);
 		if (searchInAera(measurements[i], 200, window_descriptors[i], descriptors_old, keypoints_old, pt))
-			status.push_back(1);
+			status.emplace_back(1);
 		else
-			status.push_back(0);
-		measurements_old.push_back(pt);
+			status.emplace_back(0);
+		measurements_old.emplace_back(pt);
 	}
 	measurements_matched = measurements;
 	features_id_matched = features_id;
@@ -202,24 +202,21 @@ void KeyFrame::PnPRANSAC(std::vector<cv::Point2f> &measurements_old,
 	cv::eigen2cv(P_inital, t);
 
 	std::vector<cv::Point3f> pts_3_vector;
-	for (auto &it : point_clouds_matched)
-		pts_3_vector.push_back(cv::Point3f((float)it.x(), (float)it.y(), (float)it.z()));
+	for (const auto &it : point_clouds_matched)
+		pts_3_vector.emplace_back(cv::Point3f((float)it.x(), (float)it.y(), (float)it.z()));
 
 	cv::Mat inliers;
 	if (CV_MAJOR_VERSION < 3)
 		solvePnPRansac(pts_3_vector, measurements_old_norm, K, D, rvec, t, true, 100, 10.0 / 460.0, 100, inliers);
-	else
-	{
+	else {
 		if (CV_MINOR_VERSION < 2)
 			solvePnPRansac(pts_3_vector, measurements_old_norm, K, D, rvec, t, true, 100, sqrt(10.0 / 460.0), 0.99, inliers);
 		else
 			solvePnPRansac(pts_3_vector, measurements_old_norm, K, D, rvec, t, true, 100, 10.0 / 460.0, 0.99, inliers);
-
 	}
 
 	std::vector<uchar> status(measurements_old_norm.size(), 0);
-	for (int i = 0; i < inliers.rows; i++)
-	{
+	for (int i = 0; i < inliers.rows; ++i) {
 		int n = inliers.at<int>(i);
 		status[n] = 1;
 	}
@@ -361,7 +358,7 @@ void BriefExtractor::operator() (const cv::Mat &im, const std::vector<cv::Point2
 	{
 		cv::KeyPoint key;
 		key.pt = window_pts[i];
-		keys.push_back(key);
+		keys.emplace_back(key);
 	}
 	m_brief.compute(im, keys, descriptors);
 }

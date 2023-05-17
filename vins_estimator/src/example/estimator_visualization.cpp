@@ -191,16 +191,16 @@ void visualization()
 	// 添加外参曲线图
 	pangolin::DataLog logTic;
 	std::vector<std::string> labelTic;
-	labelTic.push_back(std::string("Tic.x"));
-	labelTic.push_back(std::string("Tic.y"));
-	labelTic.push_back(std::string("Tic.z"));
+	labelTic.emplace_back(std::string("Tic.x"));
+	labelTic.emplace_back(std::string("Tic.y"));
+	labelTic.emplace_back(std::string("Tic.z"));
 	logTic.SetLabels(labelTic);
 
 	pangolin::DataLog logRic;
 	std::vector<std::string> labelRic;
-	labelRic.push_back(std::string("yaw"));
-	labelRic.push_back(std::string("pitch"));
-	labelRic.push_back(std::string("roll"));                                                                              
+	labelRic.emplace_back(std::string("yaw"));
+	labelRic.emplace_back(std::string("pitch"));
+	labelRic.emplace_back(std::string("roll"));
 	logRic.SetLabels(labelRic);
 
 	pangolin::Plotter plotterRic(&logRic, 0.0f, 100.0f, -0.02f, 0.02f, 10.0f, 0.001f);
@@ -675,7 +675,7 @@ void process()
 				m_retrive_data_buf.lock();
 				while (!retrive_data_buf.empty())
 				{
-					estimator.retrive_data_vector.push_back(retrive_data_buf.front());
+					estimator.retrive_data_vector.emplace_back(retrive_data_buf.front());
 					retrive_data_buf.pop();
 				}
 				m_retrive_data_buf.unlock();
@@ -822,18 +822,18 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 				r_status[i] = 0;
 
 			if (r_status[i]) {
-				idx.push_back(i);
+				idx.emplace_back(i);
 
 				Eigen::Vector3d tmp_p;
 				trackerData[0].m_camera->liftProjective(Eigen::Vector2d(trackerData[0].cur_pts[i].x, trackerData[0].cur_pts[i].y), tmp_p);
 				tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
 				tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;
-				ll.push_back(cv::Point2f(tmp_p.x(), tmp_p.y()));
+				ll.emplace_back(cv::Point2f(tmp_p.x(), tmp_p.y()));
 
 				trackerData[1].m_camera->liftProjective(Eigen::Vector2d(trackerData[1].cur_pts[i].x, trackerData[1].cur_pts[i].y), tmp_p);
 				tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
 				tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;
-				rr.push_back(cv::Point2f(tmp_p.x(), tmp_p.y()));
+				rr.emplace_back(cv::Point2f(tmp_p.x(), tmp_p.y()));
 			}
 		}
 		if (ll.size() >= 8) {
@@ -883,10 +883,10 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 					p.y = un_pts[j].y;
 					p.z = 1;
 
-					feature_points->points.push_back(p);
-					id_of_point.values.push_back(p_id * NUM_OF_CAM + i);
-					u_of_point.values.push_back(cur_pts[j].x);
-					v_of_point.values.push_back(cur_pts[j].y);
+					feature_points->points.emplace_back(p);
+					id_of_point.values.emplace_back(p_id * NUM_OF_CAM + i);
+					u_of_point.values.emplace_back(cur_pts[j].x);
+					v_of_point.values.emplace_back(cur_pts[j].y);
 					//assert(inBorder(cur_pts[j]));
 				}
 			}
@@ -904,15 +904,15 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 						p.y = r_un_pts[j].y;
 						p.z = 1;
 
-						feature_points->points.push_back(p);
-						id_of_point.values.push_back(p_id * NUM_OF_CAM + i);
+						feature_points->points.emplace_back(p);
+						id_of_point.values.emplace_back(p_id * NUM_OF_CAM + i);
 					}
 				}
 			}
 		}
-		feature_points->channels.push_back(id_of_point);
-		feature_points->channels.push_back(u_of_point);
-		feature_points->channels.push_back(v_of_point);
+		feature_points->channels.emplace_back(id_of_point);
+		feature_points->channels.emplace_back(u_of_point);
+		feature_points->channels.emplace_back(v_of_point);
 		feature_callback(feature_points);
 
 		// 可视化显示图像特征点
@@ -944,10 +944,10 @@ void LoadImages(const std::string &strImagePath, const std::string &strTimesStam
 		{
 			std::stringstream ss;
 			ss << s;
-			strImagesFileNames.push_back(strImagePath + "/" + ss.str() + ".png");
+			strImagesFileNames.emplace_back(strImagePath + "/" + ss.str() + ".png");
 			double t;
 			ss >> t;
-			timeStamps.push_back(t / 1e9);
+			timeStamps.emplace_back(t / 1e9);
 		}
 	}
 }
@@ -1013,16 +1013,25 @@ int main(int argc, char **argv)
 	cv::Mat image;
 	int ni = 0;
 
+    std::cout << "a" << std::endl;
+
 	readParameters(argv[1]);
+
+    std::cout << "b" << std::endl;
 
 	estimator.setParameter();
 	for (int i = 0; i < NUM_OF_CAM; i++)
 		trackerData[i].readIntrinsicParameter(CAM_NAMES[i]);
 
+    std::cout << "c" << std::endl;
+
 	std::vector<std::string> vStrImagesFileNames;
 	std::vector<double> vTimeStamps;
 	LoadImages(std::string(argv[2]), std::string(argv[3]), vStrImagesFileNames, vTimeStamps);
+    std::cout << "d" << std::endl;
 	m_camera = CameraFactory::instance()->generateCameraFromYamlFile(CAM_NAMES_ESTIMATOR);
+
+    std::cout << "d" << std::endl;
 
 	int imageNum = vStrImagesFileNames.size();
 	if (imageNum <= 0){

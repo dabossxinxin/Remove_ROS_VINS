@@ -2,18 +2,18 @@
 
 InitialEXRotation::InitialEXRotation(){
     frame_count = 0;
-    Rc.push_back(Eigen::Matrix3d::Identity());
-    Rc_g.push_back(Eigen::Matrix3d::Identity());
-    Rimu.push_back(Eigen::Matrix3d::Identity());
+    Rc.emplace_back(Eigen::Matrix3d::Identity());
+    Rc_g.emplace_back(Eigen::Matrix3d::Identity());
+    Rimu.emplace_back(Eigen::Matrix3d::Identity());
     ric = Eigen::Matrix3d::Identity();
 }
 
 bool InitialEXRotation::CalibrationExRotation(std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> corres, Eigen::Quaterniond delta_q_imu, Eigen::Matrix3d &calib_ric_result)
 {
     frame_count++;
-    Rc.push_back(solveRelativeR(corres));
-    Rimu.push_back(delta_q_imu.toRotationMatrix());
-    Rc_g.push_back(ric.inverse() * delta_q_imu * ric);
+    Rc.emplace_back(solveRelativeR(corres));
+    Rimu.emplace_back(delta_q_imu.toRotationMatrix());
+    Rc_g.emplace_back(ric.inverse() * delta_q_imu * ric);
 
     Eigen::MatrixXd A(frame_count * 4, 4);
     A.setZero();
@@ -72,8 +72,8 @@ Eigen::Matrix3d InitialEXRotation::solveRelativeR(const std::vector<std::pair<Ei
 		std::vector<cv::Point2f> ll, rr;
         for (int i = 0; i < int(corres.size()); i++)
         {
-            ll.push_back(cv::Point2f(corres[i].first(0), corres[i].first(1)));
-            rr.push_back(cv::Point2f(corres[i].second(0), corres[i].second(1)));
+            ll.emplace_back(cv::Point2f(corres[i].first(0), corres[i].first(1)));
+            rr.emplace_back(cv::Point2f(corres[i].second(0), corres[i].second(1)));
         }
         cv::Mat E = cv::findFundamentalMat(ll, rr);
         cv::Mat_<double> R1, R2, t1, t2;

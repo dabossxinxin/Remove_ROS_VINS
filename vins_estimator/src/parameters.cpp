@@ -103,8 +103,8 @@ void readParameters(const std::string & config_file)
 
 	if (ESTIMATE_EXTRINSIC == 2) {
 		console::print_highlight("INFO: have no prior about extrinsic param, calibrate extrinsic param\n");
-		RIC.push_back(Eigen::Matrix3d::Identity());
-		TIC.push_back(Eigen::Vector3d::Zero());
+		RIC.emplace_back(Eigen::Matrix3d::Identity());
+		TIC.emplace_back(Eigen::Vector3d::Zero());
 		fsSettings["ex_calib_result_path"] >> EX_CALIB_RESULT_PATH;
 		EX_CALIB_RESULT_PATH = VINS_FOLDER_PATH + EX_CALIB_RESULT_PATH;
 	}
@@ -126,8 +126,8 @@ void readParameters(const std::string & config_file)
 		cv::cv2eigen(cv_T, eigen_T);
 		Eigen::Quaterniond Q(eigen_R);
 		eigen_R = Q.normalized();
-		RIC.push_back(eigen_R);
-		TIC.push_back(eigen_T);
+		RIC.emplace_back(eigen_R);
+		TIC.emplace_back(eigen_T);
 
 		console::print_highlight("Extrinsic_R:\n");
 		console::print_matrix(RIC[0].data(), 3, 3);
@@ -168,7 +168,7 @@ void readParameters(const std::string & config_file)
 	FISHEYE = fsSettings["fisheye"];
 	if (FISHEYE == 1)
 		FISHEYE_MASK = VINS_FOLDER_PATH + "/config/fisheye_mask.jpg";
-	CAM_NAMES.push_back(config_file);
+	CAM_NAMES.emplace_back(config_file);
 	WINDOW_SIZE_FEATURE_TRACKER = 20;
 	STEREO_TRACK = false;
 	FOCAL_LENGTH = 460;

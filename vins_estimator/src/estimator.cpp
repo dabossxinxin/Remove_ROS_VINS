@@ -181,7 +181,7 @@ void Estimator::processImage(const std::map<int, std::vector<std::pair<int, Eige
 		// 准备系统的输出数据
         key_poses.clear();
 		for (int i = 0; i <= WINDOW_SIZE; i++)
-			key_poses.push_back(Ps[i]);
+			key_poses.emplace_back(Ps[i]);
 
 		// 优化完成后获取滑窗中第一帧与最后一帧的位姿
         last_R = Rs[WINDOW_SIZE];
@@ -892,7 +892,7 @@ void Estimator::optimization()
         for (int i = 0; i < NUM_OF_CAM; i++)
             addr_shift[reinterpret_cast<long>(para_Ex_Pose[i])] = para_Ex_Pose[i];
 
-		auto& parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
+		std::vector<double*> parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
 
 		if (last_marginalization_info)
 			delete last_marginalization_info;
@@ -952,7 +952,7 @@ void Estimator::optimization()
 			for (int i = 0; i < NUM_OF_CAM; i++)
 				addr_shift[reinterpret_cast<long>(para_Ex_Pose[i])] = para_Ex_Pose[i];
 
-			auto& parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
+			std::vector<double*> parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
             if (last_marginalization_info)
                 delete last_marginalization_info;
 			last_marginalization_info = std::move(marginalization_info);

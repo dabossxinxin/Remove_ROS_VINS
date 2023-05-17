@@ -838,8 +838,8 @@ bool TemplatedLoopDetector<TDescriptor, F>::detectLoop(
 	if (m_image_keys.size() == entry_id)
 	{
 		//printf("image size = entry_id %d\n", entry_id);
-		m_image_keys.push_back(keys);
-		m_image_descriptors.push_back(descriptors);
+		m_image_keys.emplace_back(keys);
+		m_image_descriptors.emplace_back(descriptors);
 	}
 	else
 	{
@@ -876,7 +876,7 @@ void TemplatedLoopDetector<TDescriptor, F>::computeIslands
 
 	if (q.size() == 1)
 	{
-		islands.push_back(tIsland(q[0].Id, q[0].Id, calculateIslandScore(q, 0, 0)));
+		islands.emplace_back(tIsland(q[0].Id, q[0].Id, calculateIslandScore(q, 0, 0)));
 		islands.back().best_entry = q[0].Id;
 		islands.back().best_score = q[0].Score;
 	}
@@ -917,7 +917,7 @@ void TemplatedLoopDetector<TDescriptor, F>::computeIslands
 				int length = last_island_entry - first_island_entry + 1;
 				if (length >= m_params.min_matches_per_group)
 				{
-					islands.push_back(tIsland(first_island_entry, last_island_entry,
+					islands.emplace_back(tIsland(first_island_entry, last_island_entry,
 						calculateIslandScore(q, i_first, i_last)));
 
 					islands.back().best_score = best_score;
@@ -935,7 +935,7 @@ void TemplatedLoopDetector<TDescriptor, F>::computeIslands
 		if (last_island_entry - first_island_entry + 1 >=
 			m_params.min_matches_per_group)
 		{
-			islands.push_back(tIsland(first_island_entry, last_island_entry,
+			islands.emplace_back(tIsland(first_island_entry, last_island_entry,
 				calculateIslandScore(q, i_first, i_last)));
 
 			islands.back().best_score = best_score;
@@ -1004,7 +1004,7 @@ void TemplatedLoopDetector<TDescriptor, F>::reduceInputToOutput(std::vector<cv::
 	//v_out.reserve(v_in.size());
 	for (int i = 0; i < int(v_in.size()); i++)
 		if (status[i])
-			v_out.push_back(v_in[i]);
+			v_out.emplace_back(v_in[i]);
 }
 
 template<class TDescriptor, class F>
@@ -1122,8 +1122,8 @@ bool TemplatedLoopDetector<TDescriptor, F>::isGeometricallyConsistent_DI(
 			const cv::KeyPoint &old_k = m_image_keys[old_entry][*oit];
 			const cv::KeyPoint &cur_k = keys[*cit];
 
-			old_points.push_back(old_k.pt);
-			cur_points.push_back(cur_k.pt);
+			old_points.emplace_back(old_k.pt);
+			cur_points.emplace_back(cur_k.pt);
 		}
 
 		cv::Mat oldMat(old_points.size(), 2, CV_32F, &old_points[0]);
@@ -1204,8 +1204,8 @@ void TemplatedLoopDetector<TDescriptor, F>::getMatches_neighratio(
 
 			if (bit == i_match_B.end())
 			{
-				i_match_B.push_back(idx_B);
-				i_match_A.push_back(*ait);
+				i_match_B.emplace_back(idx_B);
+				i_match_A.emplace_back(*ait);
 			}
 			else
 			{
