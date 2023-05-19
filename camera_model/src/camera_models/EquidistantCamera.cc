@@ -348,7 +348,7 @@ namespace camodocal
 				std::vector<cv::Point2d> circle;
 				for (int c = 0; c < boardSize.width; ++c)
 				{
-					circle.push_back(imagePoints.at(i).at(r * boardSize.width + c));
+					circle.emplace_back(imagePoints.at(i).at(r * boardSize.width + c));
 				}
 
 				fitCircle(circle, center[r](0), center[r](1), radius[r]);
@@ -689,7 +689,7 @@ namespace camodocal
 		std::vector<int> pows;
 		for (int i = 1; i <= n; i += 2)
 		{
-			pows.push_back(i);
+			pows.emplace_back(i);
 		}
 
 		Eigen::MatrixXd X(x.size(), pows.size());
@@ -803,7 +803,7 @@ namespace camodocal
 					t = 0.0;
 				}
 
-				thetas.push_back(t);
+				thetas.emplace_back(t);
 			}
 
 			if (thetas.empty())

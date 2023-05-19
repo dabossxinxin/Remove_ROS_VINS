@@ -289,8 +289,8 @@ namespace camodocal
 			// printf("rst = %.12f\n", sr32_squared_1*sr32_squared_1 + (CC-BB)*sr32_squared_1 - AA);
 
 			std::vector<double> sr32_squared_values;
-			if (sr32_squared_1 > 0) sr32_squared_values.push_back(sr32_squared_1);
-			if (sr32_squared_2 > 0) sr32_squared_values.push_back(sr32_squared_2);
+			if (sr32_squared_1 > 0) sr32_squared_values.emplace_back(sr32_squared_1);
+			if (sr32_squared_2 > 0) sr32_squared_values.emplace_back(sr32_squared_2);
 			assert(!sr32_squared_values.empty());
 
 			std::vector<double> sr32_values;
@@ -298,21 +298,21 @@ namespace camodocal
 			for (auto sr32_squared : sr32_squared_values) {
 				for (int sign = -1; sign <= 1; sign += 2) {
 					const double sr32 = static_cast<double>(sign) * std::sqrt(sr32_squared);
-					sr32_values.push_back(sr32);
+					sr32_values.emplace_back(sr32);
 					if (sr32_squared == 0.0) {
 						// sr31 can be calculated through norm equality, 
 						// but it has positive and negative posibilities
 						// positive one
-						sr31_values.push_back(std::sqrt(CC - BB));
+						sr31_values.emplace_back(std::sqrt(CC - BB));
 						// negative one
-						sr32_values.push_back(sr32);
-						sr31_values.push_back(-std::sqrt(CC - BB));
+						sr32_values.emplace_back(sr32);
+						sr31_values.emplace_back(-std::sqrt(CC - BB));
 
 						break; // skip the same situation
 					}
 					else {
 						// sr31 can be calculated throught dot product == 0
-						sr31_values.push_back(-(sr11*sr12 + sr21 * sr22) / sr32);
+						sr31_values.emplace_back(-(sr11*sr12 + sr21 * sr22) / sr32);
 					}
 				}
 			}
@@ -334,8 +334,8 @@ namespace camodocal
 				H(1, 0) = sr21; H(1, 1) = sr22; H(1, 2) = st2;
 				H(2, 0) = sr31; H(2, 1) = sr32; H(2, 2) = 0;
 
-				H_values.push_back(lambda * H);
-				H_values.push_back(-lambda * H);
+				H_values.emplace_back(lambda * H);
+				H_values.emplace_back(-lambda * H);
 			}
 
 			for (auto& H : H_values) {
@@ -413,7 +413,7 @@ namespace camodocal
 					// std::cout << "x(poly and t3) = " << x << std::endl;
 
 					if (x(2) > 0 && x(3) > 0) {
-						H_candidates.push_back(H);
+						H_candidates.emplace_back(H);
 					}
 				}
 			}
@@ -429,8 +429,8 @@ namespace camodocal
 			R.col(2) = H.col(0).cross(H.col(1));
 
 			Eigen::Vector3d T = H.col(2);
-			RList.push_back(R);
-			TList.push_back(T);
+			RList.emplace_back(R);
+			TList.emplace_back(T);
 
 			// std::cout << "#" << image_index << " frame" << " R =" << R << " \nT = " << T.transpose() << std::endl;
 		}
@@ -546,8 +546,8 @@ namespace camodocal
 					rou_pow_k *= rou;
 				}
 
-				rou_vec.push_back(rou);
-				z_vec.push_back(z);
+				rou_vec.emplace_back(rou);
+				z_vec.emplace_back(z);
 			}
 
 			assert(rou_vec.size() == z_vec.size());

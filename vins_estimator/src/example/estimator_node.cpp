@@ -630,7 +630,7 @@ void process()
 				{
 					RetriveData tmp_retrive_data = retrive_data_buf.front();
 					retrive_data_buf.pop();
-					estimator.retrive_data_vector.push_back(tmp_retrive_data);
+					estimator.retrive_data_vector.emplace_back(tmp_retrive_data);
 				}
 				m_retrive_data_buf.unlock();
 				//WINDOW_SIZE - 2 is key frame
@@ -788,18 +788,18 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 
 			if (r_status[i])
 			{
-				idx.push_back(i);
+				idx.emplace_back(i);
 
 				Eigen::Vector3d tmp_p;
 				trackerData[0].m_camera->liftProjective(Eigen::Vector2d(trackerData[0].cur_pts[i].x, trackerData[0].cur_pts[i].y), tmp_p);
 				tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
 				tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;
-				ll.push_back(cv::Point2f(tmp_p.x(), tmp_p.y()));
+				ll.emplace_back(cv::Point2f(tmp_p.x(), tmp_p.y()));
 
 				trackerData[1].m_camera->liftProjective(Eigen::Vector2d(trackerData[1].cur_pts[i].x, trackerData[1].cur_pts[i].y), tmp_p);
 				tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
 				tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;
-				rr.push_back(cv::Point2f(tmp_p.x(), tmp_p.y()));
+				rr.emplace_back(cv::Point2f(tmp_p.x(), tmp_p.y()));
 			}
 		}
 		if (ll.size() >= 8)
@@ -857,10 +857,10 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 					p.y = un_pts[j].y;
 					p.z = 1;
 
-					feature_points->points.push_back(p);
-					id_of_point.values.push_back(p_id * NUM_OF_CAM + i);
-					u_of_point.values.push_back(cur_pts[j].x);
-					v_of_point.values.push_back(cur_pts[j].y);
+					feature_points->points.emplace_back(p);
+					id_of_point.values.emplace_back(p_id * NUM_OF_CAM + i);
+					u_of_point.values.emplace_back(cur_pts[j].x);
+					v_of_point.values.emplace_back(cur_pts[j].y);
 					assert(inBorder(cur_pts[j]));
 				}
 			}
@@ -879,15 +879,15 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 						p.y = r_un_pts[j].y;
 						p.z = 1;
 
-						feature_points->points.push_back(p);
-						id_of_point.values.push_back(p_id * NUM_OF_CAM + i);
+						feature_points->points.emplace_back(p);
+						id_of_point.values.emplace_back(p_id * NUM_OF_CAM + i);
 					}
 				}
 			}
 		}
-		feature_points->channels.push_back(id_of_point);
-		feature_points->channels.push_back(u_of_point);
-		feature_points->channels.push_back(v_of_point);
+		feature_points->channels.emplace_back(id_of_point);
+		feature_points->channels.emplace_back(u_of_point);
+		feature_points->channels.emplace_back(v_of_point);
 		feature_callback(feature_points);          //add
 
 		// 可视化显示图像特征点
@@ -919,10 +919,10 @@ void LoadImages(const std::string &strImagePath, const std::string &strTimesStam
 		{
 			std::stringstream ss;
 			ss << s;
-			strImagesFileNames.push_back(strImagePath + "/" + ss.str() + ".png");
+			strImagesFileNames.emplace_back(strImagePath + "/" + ss.str() + ".png");
 			double t;
 			ss >> t;
-			timeStamps.push_back(t / 1e9);
+			timeStamps.emplace_back(t / 1e9);
 		}
 	}
 }

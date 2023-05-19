@@ -116,12 +116,12 @@ void pubKeyPoses(const Estimator &estimator, const std_msgs::Header &header, Eig
     for (int i = 0; i <= WINDOW_SIZE; i++)
     {
         geometry_msgs::Point pose_marker;
-        Vector3d correct_pose;
+        Eigen::Vector3d correct_pose;
         correct_pose = loop_correct_r * estimator.key_poses[i] + loop_correct_t;
         pose_marker.x = correct_pose.x();
         pose_marker.y = correct_pose.y();
         pose_marker.z = correct_pose.z();
-        key_poses.points.push_back(pose_marker);
+        key_poses.points.emplace_back(pose_marker);
     }
     pub_key_poses.publish(key_poses);
 }
@@ -182,7 +182,7 @@ void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header, E
         p.x = w_pts_i(0);
         p.y = w_pts_i(1);
         p.z = w_pts_i(2);
-        point_cloud.points.push_back(p);
+        point_cloud.points.emplace_back(p);
     }
     pub_point_cloud.publish(point_cloud);
 
@@ -213,7 +213,7 @@ void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header, E
             p.x = w_pts_i(0);
             p.y = w_pts_i(1);
             p.z = w_pts_i(2);
-            margin_cloud.points.push_back(p);
+            margin_cloud.points.emplace_back(p);
         }
     }
     pub_margin_cloud.publish(margin_cloud);
@@ -289,7 +289,7 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header, Eig
         pose_stamped.pose = odometry.pose.pose;
         path.header = header;
         path.header.frame_id = "world";
-        path.poses.push_back(pose_stamped);
+        path.poses.emplace_back(pose_stamped);
         pub_path.publish(path);*/
 
 		Eigen::Vector3d correct_t;
@@ -313,7 +313,7 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header, Eig
         pose_stamped.pose = odometry.pose.pose;
         loop_path.header = header;
         loop_path.header.frame_id = "world";
-        loop_path.poses.push_back(pose_stamped);
+        loop_path.poses.emplace_back(pose_stamped);
         pub_loop_path.publish(loop_path);
 */
         // write result to file

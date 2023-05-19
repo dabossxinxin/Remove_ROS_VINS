@@ -26,7 +26,7 @@ class IntegrationBase
         noise.block<3, 3>(15, 15) =  (GYR_W * GYR_W) * Eigen::Matrix3d::Identity();
     }
 
-    void push_back(double dt, const Eigen::Vector3d &acc, const Eigen::Vector3d &gyr)
+    void emplace_back(double dt, const Eigen::Vector3d &acc, const Eigen::Vector3d &gyr)
     {
         dt_buf.emplace_back(dt);
         acc_buf.emplace_back(acc);

@@ -313,7 +313,7 @@ Chessboard::findChessboardCornersImproved(const cv::Mat& image,
         corners.reserve(outputCorners.size());
         for (size_t i = 0; i < outputCorners.size(); ++i)
         {
-            corners.push_back(outputCorners.at(i)->pt);
+            corners.emplace_back(outputCorners.at(i)->pt);
         }
 
         cv::cornerSubPix(image, corners, cv::Size(11, 11), cv::Size(-1,-1),
@@ -465,9 +465,9 @@ Chessboard::findConnectedQuads(std::vector<ChessboardQuadPtr>& quads,
     // Recursively find a group of connected quads starting from the seed quad
 
     std::vector<ChessboardQuadPtr> stack;
-    stack.push_back(q);
+    stack.emplace_back(q);
 
-    group.push_back(q);
+    group.emplace_back(q);
     q->group_idx = group_idx;
 
     while (!stack.empty())
@@ -483,8 +483,8 @@ Chessboard::findConnectedQuads(std::vector<ChessboardQuadPtr>& quads,
             // neighbors and the neighbor has not been classified yet.
             if (neighbor.get() && neighbor->count > 0 && neighbor->group_idx < 0)
             {
-                stack.push_back(neighbor);
-                group.push_back(neighbor);
+                stack.emplace_back(neighbor);
+                group.emplace_back(neighbor);
                 neighbor->group_idx = group_idx;
             }
         }
@@ -1142,7 +1142,7 @@ Chessboard::augmentBestRun(std::vector<ChessboardQuadPtr>& candidateQuads, int c
                     newQuad->corners[j]->pt = closestQuad->corners[j]->pt;
                 }
 
-                existingQuads.push_back(newQuad);
+                existingQuads.emplace_back(newQuad);
 
                 // Start the function again
                 return -1;
@@ -1242,7 +1242,7 @@ Chessboard::generateQuads(std::vector<ChessboardQuadPtr>& quads,
                 (d3*4 > d4 && d4*4 > d3 && d3*d4 < area*1.5 && area > minSize &&
                 d1 >= 0.15 * p && d2 >= 0.15 * p))
             {
-                quadContours.push_back(approxContour);
+                quadContours.emplace_back(approxContour);
             }
         }
     }
@@ -1419,7 +1419,7 @@ Chessboard::checkQuadGroup(std::vector<ChessboardQuadPtr>& quads,
                         if ((iter == 1 && boardEdge) || (iter == 2 && !boardEdge))
                         {
                             // The respective row and column have been found
-                            corners.push_back(quad->corners[l]);
+                            corners.emplace_back(quad->corners[l]);
                         }
 
                         if (iter == 2 && boardEdge)
@@ -1545,7 +1545,7 @@ Chessboard::getQuadrangleHypotheses(const std::vector< std::vector<cv::Point> >&
             continue;
         }
 
-        quads.push_back(std::pair<float, int>(boxSize, classId));
+        quads.emplace_back(std::pair<float, int>(boxSize, classId));
     }
 }
 

@@ -244,7 +244,7 @@ namespace camodocal
 			Eigen::Vector2d p;
 			spaceToPlane(P, p);
 
-			imagePoints.push_back(cv::Point2f(p(0), p(1)));
+			imagePoints.emplace_back(cv::Point2f(p(0), p(1)));
 		}
 	}
 }

@@ -451,8 +451,8 @@ EntryId TemplatedDatabase<TDescriptor, F>::add(const BowVector &v,
     // update direct file
     if(entry_id == m_dfile.size())
     {
-      m_dfile.push_back(fv);
-      m_dBowfile.push_back(v);
+      m_dfile.emplace_back(fv);
+      m_dBowfile.emplace_back(v);
     }
     else
     {
@@ -468,7 +468,7 @@ EntryId TemplatedDatabase<TDescriptor, F>::add(const BowVector &v,
     const WordValue& word_weight = vit->second;
     
     IFRow& ifrow = m_ifile[word_id];
-    ifrow.push_back(IFPair(entry_id, word_weight));
+    ifrow.emplace_back(IFPair(entry_id, word_weight));
   }
   
   return entry_id;
@@ -699,7 +699,7 @@ void TemplatedDatabase<TDescriptor, F>::queryL1(const BowVector &vec,
   ret.reserve(pairs.size());
   for(pit = pairs.begin(); pit != pairs.end(); ++pit)
   {
-    ret.push_back(Result(pit->first, pit->second));
+    ret.emplace_back(Result(pit->first, pit->second));
   }
 	
   // resulting "scores" are now in [-2 best .. 0 worst]	
@@ -780,7 +780,7 @@ void TemplatedDatabase<TDescriptor, F>::queryL2(const BowVector &vec,
   //cit = counters.begin();
   for(pit = pairs.begin(); pit != pairs.end(); ++pit)//, ++cit)
   {
-    ret.push_back(Result(pit->first, pit->second));// / cit->second));
+    ret.emplace_back(Result(pit->first, pit->second));// / cit->second));
   }
 	
   // resulting "scores" are now in [-1 best .. 0 worst]	
@@ -887,7 +887,7 @@ void TemplatedDatabase<TDescriptor, F>::queryChiSquare(const BowVector &vec,
   {
     if(pit->second.second >= MIN_COMMON_WORDS)
     {
-      ret.push_back(Result(pit->first, pit->second.first));
+      ret.emplace_back(Result(pit->first, pit->second.first));
       ret.back().nWords = pit->second.second;
       ret.back().sumCommonVi = sit->second.first;
       ret.back().sumCommonWi = sit->second.second;
@@ -895,7 +895,7 @@ void TemplatedDatabase<TDescriptor, F>::queryChiSquare(const BowVector &vec,
         2 * sit->second.second / (1 + sit->second.second);
     }
   
-    //ret.push_back(Result(pit->first, pit->second));
+    //ret.emplace_back(Result(pit->first, pit->second));
   }
 	
   // resulting "scores" are now in [-2 best .. 0 worst]	
@@ -995,7 +995,7 @@ void TemplatedDatabase<TDescriptor, F>::queryKL(const BowVector &vec,
     pit->second += value;
     
     // to vector
-    ret.push_back(Result(pit->first, pit->second));
+    ret.emplace_back(Result(pit->first, pit->second));
   }
   
   // real scores are now in [0 best .. X worst]
@@ -1068,7 +1068,7 @@ void TemplatedDatabase<TDescriptor, F>::queryBhattacharyya(
   {
     if(pit->second.second >= MIN_COMMON_WORDS)
     {
-      ret.push_back(Result(pit->first, pit->second.first));
+      ret.emplace_back(Result(pit->first, pit->second.first));
       ret.back().nWords = pit->second.second;
       ret.back().bhatScore = pit->second.first;
     }
@@ -1138,7 +1138,7 @@ void TemplatedDatabase<TDescriptor, F>::queryDotProduct(
   ret.reserve(pairs.size());
   for(pit = pairs.begin(); pit != pairs.end(); ++pit)
   {
-    ret.push_back(Result(pit->first, pit->second));
+    ret.emplace_back(Result(pit->first, pit->second));
   }
 	
   // scores are the greater the better
@@ -1313,7 +1313,7 @@ void TemplatedDatabase<TDescriptor, F>::load(const cv::FileStorage &fs,
       EntryId eid = (int)fw[i]["imageId"];
       WordValue v = fw[i]["weight"];
       
-      m_ifile[wid].push_back(IFPair(eid, v));
+      m_ifile[wid].emplace_back(IFPair(eid, v));
     }
   }
   
@@ -1354,7 +1354,7 @@ void TemplatedDatabase<TDescriptor, F>::load(const cv::FileStorage &fs,
         cv::FileNodeIterator ffit;
         for(ffit = ff.begin(); ffit != ff.end(); ++ffit)
         {
-          dit->second.push_back((int)*ffit); 
+          dit->second.emplace_back((int)*ffit); 
         }
       }
     } // for each entry

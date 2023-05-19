@@ -53,17 +53,17 @@ namespace camodocal
 	void
 		CameraCalibration::addChessboardData(const std::vector<cv::Point2f>& corners)
 	{
-		m_imagePoints.push_back(corners);
+		m_imagePoints.emplace_back(corners);
 
 		std::vector<cv::Point3f> scenePointsInView;
 		for (int i = 0; i < m_boardSize.height; ++i)
 		{
 			for (int j = 0; j < m_boardSize.width; ++j)
 			{
-				scenePointsInView.push_back(cv::Point3f(i * m_squareSize, j * m_squareSize, 0.0));
+				scenePointsInView.emplace_back(cv::Point3f(i * m_squareSize, j * m_squareSize, 0.0));
 			}
 		}
-		m_scenePoints.push_back(scenePointsInView);
+		m_scenePoints.emplace_back(scenePointsInView);
 	}
 
 	bool
@@ -104,7 +104,7 @@ namespace camodocal
 
 				cv::Point2f err = pObs - pEst;
 
-				errVec.at(i).push_back(err);
+				errVec.at(i).emplace_back(err);
 
 				errSum += Eigen::Vector2d(err.x, err.y);
 			}
@@ -219,8 +219,8 @@ namespace camodocal
 			tvec.at<double>(1) = m_cameraPoses.at<double>(i, 4);
 			tvec.at<double>(2) = m_cameraPoses.at<double>(i, 5);
 
-			rvecs.push_back(rvec);
-			tvecs.push_back(tvec);
+			rvecs.emplace_back(rvec);
+			tvecs.emplace_back(tvec);
 		}
 
 		int drawShiftBits = 4;

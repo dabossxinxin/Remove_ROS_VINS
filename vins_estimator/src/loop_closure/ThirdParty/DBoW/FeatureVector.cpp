@@ -34,13 +34,13 @@ void FeatureVector::addFeature(NodeId id, unsigned int i_feature)
   
   if(vit != this->end() && vit->first == id)
   {
-    vit->second.push_back(i_feature);
+    vit->second.emplace_back(i_feature);
   }
   else
   {
     vit = this->insert(vit, FeatureVector::value_type(id, 
       std::vector<unsigned int>() ));
-    vit->second.push_back(i_feature);
+    vit->second.emplace_back(i_feature);
   }
 }
 

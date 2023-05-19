@@ -68,7 +68,7 @@ public:
 	inline void addPoint(double x, double y)
 	{
 		_valid = false;
-		base::push_back(std::pair<double, double>(x, y));
+		base::emplace_back(std::pair<double, double>(x, y));
 	}
 
 	//Reset the boundary conditions

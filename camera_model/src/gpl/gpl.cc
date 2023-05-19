@@ -501,7 +501,7 @@ namespace camodocal
 
 		while (1)
 		{
-			cells.push_back(cv::Point2i(x0, y0));
+			cells.emplace_back(cv::Point2i(x0, y0));
 
 			if (x0 == x1 && y0 == y1)
 			{
@@ -605,7 +605,7 @@ namespace camodocal
 			{
 				if (mask[i][j])
 				{
-					cells.push_back(cv::Point2i(i - r + x0, j - r + y0));
+					cells.emplace_back(cv::Point2i(i - r + x0, j - r + y0));
 				}
 			}
 		}
@@ -695,13 +695,13 @@ namespace camodocal
 		if (h < 1e-10)
 		{
 			// two circles touch at one point
-			ipts.push_back(cv::Point2d(x3, y3));
+			ipts.emplace_back(cv::Point2d(x3, y3));
 			return ipts;
 		}
 
-		ipts.push_back(cv::Point2d(x3 + h * (y2 - y1) / d,
+		ipts.emplace_back(cv::Point2d(x3 + h * (y2 - y1) / d,
 			y3 - h * (x2 - x1) / d));
-		ipts.push_back(cv::Point2d(x3 - h * (y2 - y1) / d,
+		ipts.emplace_back(cv::Point2d(x3 - h * (y2 - y1) / d,
 			y3 + h * (x2 - x1) / d));
 		return ipts;
 	}

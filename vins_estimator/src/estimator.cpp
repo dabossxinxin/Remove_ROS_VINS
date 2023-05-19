@@ -78,9 +78,9 @@ void Estimator::processIMU(double dt, const Eigen::Vector3d &linear_acceleration
 
     if (frame_count != 0) {
 		// 进来的惯导数据进入预积分环节
-        pre_integrations[frame_count]->push_back(dt, linear_acceleration, angular_velocity);
+        pre_integrations[frame_count]->emplace_back(dt, linear_acceleration, angular_velocity);
         //if(solver_flag != NON_LINEAR)
-            tmp_pre_integration->push_back(dt, linear_acceleration, angular_velocity);
+            tmp_pre_integration->emplace_back(dt, linear_acceleration, angular_velocity);
 
 		// 保存进来的惯导数据到对应buf中
         dt_buf[frame_count].emplace_back(dt);
@@ -1015,7 +1015,7 @@ void Estimator::slideWindow()
 				Eigen::Vector3d tmp_linear_acceleration = linear_acceleration_buf[frame_count][i];
 				Eigen::Vector3d tmp_angular_velocity = angular_velocity_buf[frame_count][i];
 
-                pre_integrations[frame_count - 1]->push_back(tmp_dt, tmp_linear_acceleration, tmp_angular_velocity);
+                pre_integrations[frame_count - 1]->emplace_back(tmp_dt, tmp_linear_acceleration, tmp_angular_velocity);
 
 				dt_buf[frame_count - 1].emplace_back(tmp_dt);
 				linear_acceleration_buf[frame_count - 1].emplace_back(tmp_linear_acceleration);
