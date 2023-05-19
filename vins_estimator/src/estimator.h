@@ -69,6 +69,7 @@ public:
 	void vector2double();
 	void double2vector();
 	bool failureDetection();
+	void localPointCloud();
 
 	enum SolverFlag
 	{

@@ -63,8 +63,7 @@ void KeyFrameDatabase::viewPath()
 	glLineWidth(line_width);
 	glBegin(GL_LINE_STRIP);
 	
-	for(auto it = keyFrameList.begin(); it != keyFrameList.end(); ++it)
-	{
+	for(auto it = keyFrameList.begin(); it != keyFrameList.end(); ++it) {
 		(*it)->getPath(tmp_path);
 		glVertex3f(tmp_path.x(), tmp_path.y(), tmp_path.z());
 	}

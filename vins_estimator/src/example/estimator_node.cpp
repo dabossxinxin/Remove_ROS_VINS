@@ -1011,8 +1011,7 @@ int main(int argc, char **argv)
 	measurement_process.detach();
 
 	std::thread loop_detection, pose_graph;
-	if (LOOP_CLOSURE)
-	{
+	if (LOOP_CLOSURE) {
 		loop_detection = std::thread(process_loop_detection);
 		pose_graph = std::thread(process_pose_graph);
 		std::thread visualization_thread{ visualization };

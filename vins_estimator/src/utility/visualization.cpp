@@ -206,8 +206,8 @@ void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header, E
         {
             int imu_i = it_per_id.start_frame;
             Vector3d pts_i = it_per_id.feature_per_frame[0].point * it_per_id.estimated_depth;
-            Vector3d w_pts_i = loop_correct_r * estimator.Rs[imu_i] * (estimator.ric[0] * pts_i + estimator.tic[0])
-                             + loop_correct_r * estimator.Ps[imu_i] + loop_correct_t;
+			Vector3d w_pts_i = loop_correct_r * estimator.Rs[imu_i] * (estimator.ric[0] * pts_i + estimator.tic[0])
+				+ loop_correct_r * estimator.Ps[imu_i] + loop_correct_t;
 
             geometry_msgs::Point32 p;
             p.x = w_pts_i(0);

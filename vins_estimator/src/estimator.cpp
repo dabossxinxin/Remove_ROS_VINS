@@ -182,10 +182,13 @@ void Estimator::processImage(const std::map<int, std::vector<std::pair<int, Eige
         key_poses.clear();
 		for (int i = 0; i <= WINDOW_SIZE; i++)
 			key_poses.emplace_back(Ps[i]);
+		
+		point_cloud.clear();
+		localPointCloud();
 
 		// 优化完成后获取滑窗中第一帧与最后一帧的位姿
-        last_R = Rs[WINDOW_SIZE];
-        last_P = Ps[WINDOW_SIZE];
+		last_R = Rs[WINDOW_SIZE];
+		last_P = Ps[WINDOW_SIZE];
         last_R0 = Rs[0];
         last_P0 = Ps[0];
     }
@@ -348,23 +351,23 @@ bool Estimator::visualInitialAlign()
     for (int i = 0; i <= frame_count; i++) {
 		Eigen::Matrix3d Ri = all_image_frame[Headers[i].stamp.toSec()].R;
 		Eigen::Vector3d Pi = all_image_frame[Headers[i].stamp.toSec()].T;
-        Ps[i] = Pi;
-        Rs[i] = Ri;
-        all_image_frame[Headers[i].stamp.toSec()].is_key_frame = true;
+		Ps[i] = Pi;
+		Rs[i] = Ri;
+		all_image_frame[Headers[i].stamp.toSec()].is_key_frame = true;
     }
 
 	Eigen::VectorXd dep = f_manager.getDepthVector();
 	for (int i = 0; i < dep.size(); i++)
 		dep[i] = -1;
-    f_manager.clearDepth(dep);
+	f_manager.clearDepth(dep);
 
     // 三角化f_manager中管理的地图点
 	// 因为没有加入尺度以及外参平移信息，因此没有尺度
 	Eigen::Vector3d TIC_TMP[NUM_OF_CAM];
-    for(int i = 0; i < NUM_OF_CAM; i++)
-        TIC_TMP[i].setZero();
-    ric[0] = RIC[0];
-    f_manager.setRic(ric);
+	for (int i = 0; i < NUM_OF_CAM; i++)
+		TIC_TMP[i].setZero();
+	ric[0] = RIC[0];
+	f_manager.setRic(ric);
 	f_manager.triangulate(Ps, &(TIC_TMP[0]), &(RIC[0]));
 
     double s = (x.tail<1>())(0);
@@ -391,11 +394,11 @@ bool Estimator::visualInitialAlign()
     }
 
 	Eigen::Matrix3d R0 = Utility::g2R(g);
-    double yaw = Utility::R2ypr(R0 * Rs[0]).x();
-    R0 = Utility::ypr2R(Eigen::Vector3d{-yaw, 0, 0}) * R0;
+	double yaw = Utility::R2ypr(R0 * Rs[0]).x();
+	R0 = Utility::ypr2R(Eigen::Vector3d{ -yaw, 0, 0 }) * R0;
     g = R0 * g;
 	Eigen::Matrix3d rot_diff = R0;
-    for (int i = 0; i <= frame_count; i++) {
+    for (int i = 0; i <= frame_count; ++i) {
 		Ps[i] = rot_diff * Ps[i];
 		Rs[i] = rot_diff * Rs[i];
 		Vs[i] = rot_diff * Vs[i];
@@ -405,7 +408,7 @@ bool Estimator::visualInitialAlign()
 	console::print_highlight("convert g: %f: [%f,%f,%f].\n", g.norm(), g(0), g(1), g(2));
 	console::print_highlight("convert R0: yaw-pitch-roll: [%f, %f, %f].\n", ypr(0), ypr(1), ypr(2));
 
-    return true;
+	return true;
 }
 
 bool Estimator::relativePose(Eigen::Matrix3d &relative_R, Eigen::Vector3d &relative_T, int &l)
@@ -576,6 +579,23 @@ void Estimator::double2vector()
 		relocalize_r = Utility::ypr2R(Eigen::Vector3d(relocalize_yaw, 0, 0));
 		relocalize_t = retrive_data_vector[0].P_old - relocalize_r * vio_loop_t;
     }
+}
+
+void Estimator::localPointCloud()
+{
+	for (auto &it_per_id : f_manager.feature) {
+		it_per_id.used_num = it_per_id.feature_per_frame.size();
+		if (!(it_per_id.used_num >= 2 && it_per_id.start_frame < WINDOW_SIZE - 2))
+			continue;
+
+		if (it_per_id.solve_flag != 1)
+			continue;
+
+		int imu_i = it_per_id.start_frame;
+		Eigen::Vector3d point = it_per_id.feature_per_frame[imu_i].point*it_per_id.estimated_depth;
+		point_cloud.emplace_back(relocalize_r*Rs[imu_i] * (ric[0] * point + tic[0]) + 
+			relocalize_r * Ps[imu_i] + relocalize_t);
+	}
 }
 
 bool Estimator::failureDetection()

@@ -62,11 +62,9 @@ void KeyFrame::setExtrinsic(Eigen::Vector3d T, Eigen::Matrix3d R)
 
 void KeyFrame::buildKeyFrameFeatures(Estimator &estimator, const camodocal::CameraPtr &m_camera)
 {
-	for (auto &it_per_id : estimator.f_manager.feature)
-	{
+	for (auto &it_per_id : estimator.f_manager.feature) {
 		it_per_id.used_num = it_per_id.feature_per_frame.size();
-		if (it_per_id.start_frame <= WINDOW_SIZE - 2 && it_per_id.used_num >= 4)
-		{
+		if (it_per_id.start_frame <= WINDOW_SIZE - 2 && it_per_id.used_num >= 4) {
 			Eigen::Vector3d point = it_per_id.feature_per_frame[0].point;
 			Eigen::Vector2d point_uv;
 			m_camera->spaceToPlane(point, point_uv);
@@ -102,20 +100,17 @@ bool KeyFrame::searchInAera(cv::Point2f center_cur, float area_size,
 	for (int i = 0; i < (int)descriptors_old.size(); i++)
 	{
 		// ���ڼ��������ӱ���ƥ��Ĺ���?
-		if (!inAera(keypoints_old[i].pt, center_cur, area_size)) 
-		{
+		if (!inAera(keypoints_old[i].pt, center_cur, area_size)) {
 			continue;
 		}
 
 		int dis = HammingDis(window_descriptor, descriptors_old[i]);
-		if (dis < bestDist)
-		{
+		if (dis < bestDist) {
 			bestDist = dis;
 			bestIndex = i;
 		}
 	}
-	if (bestIndex != -1)
-	{
+	if (bestIndex != -1) {
 		best_match = keypoints_old[bestIndex].pt;
 		return true;
 	}
@@ -126,13 +121,11 @@ bool KeyFrame::searchInAera(cv::Point2f center_cur, float area_size,
 void KeyFrame::FundmantalMatrixRANSAC(std::vector<cv::Point2f> &measurements_old,
 	std::vector<cv::Point2f> &measurements_old_norm, const camodocal::CameraPtr &m_camera)
 {
-	if (measurements_old.size() >= 8)
-	{
+	if (measurements_old.size() >= 8) {
 		measurements_old_norm.clear();
 
 		std::vector<cv::Point2f> un_measurements(measurements_matched.size()), un_measurements_old(measurements_old.size());
-		for (int i = 0; i < (int)measurements_matched.size(); i++)
-		{
+		for (int i = 0; i < (int)measurements_matched.size(); ++i) {
 			double FOCAL_LENGTH = 460.0;
 			Eigen::Vector3d tmp_p;
 			m_camera->liftProjective(Eigen::Vector2d(measurements_matched[i].x, measurements_matched[i].y), tmp_p);
@@ -165,8 +158,7 @@ void KeyFrame::searchByDes(std::vector<cv::Point2f> &measurements_old,
 {
 	//ROS_INFO("loop_match before cur %d %d, old %d", (int)window_descriptors.size(), (int)measurements.size(), (int)descriptors_old.size());
 	std::vector<uchar> status;
-	for (int i = 0; i < (int)window_descriptors.size(); i++)
-	{
+	for (int i = 0; i < (int)window_descriptors.size(); ++i) {
 		cv::Point2f pt(0.f, 0.f);
 		if (searchInAera(measurements[i], 200, window_descriptors[i], descriptors_old, keypoints_old, pt))
 			status.emplace_back(1);

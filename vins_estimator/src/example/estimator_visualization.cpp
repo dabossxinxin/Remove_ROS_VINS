@@ -86,6 +86,12 @@ nav_msgs::Path  loop_path;
 
 std::mutex m_img_vis;
 cv::Mat img_visualization;
+std::mutex m_real_freq;
+float realFREQ = -1;
+float t_process = -1;
+float t_detect_loop = -1;
+float t_pose_graph = -1;
+float t_img_feature = -1;
 
 void updateLoopPath(nav_msgs::Path _loop_path)
 {
@@ -167,11 +173,11 @@ void DrawCurrentCamera(pangolin::OpenGlMatrix &Twc)
 	glPopMatrix();
 }
 
-void setImageData(unsigned char * imageArray, int size) {
-	for (int i = 0; i < size; i++) {
-		imageArray[i] = (unsigned char)(rand() / (RAND_MAX / 255.0));
-	}
-}
+//void setImageData(unsigned char * imageArray, int size) {
+//	for (int i = 0; i < size; i++) {
+//		imageArray[i] = (unsigned char)(rand() / (RAND_MAX / 255.0));
+//	}
+//}
 
 void visualization()
 {
@@ -203,6 +209,12 @@ void visualization()
 	labelRic.emplace_back(std::string("roll"));
 	logRic.SetLabels(labelRic);
 
+	// 添加系统帧率统计曲线图
+	pangolin::DataLog logFREQ;
+	std::vector<std::string> labelFREQ;
+	labelFREQ.emplace_back(std::string("FREQ"));
+	logFREQ.SetLabels(labelFREQ);
+
 	pangolin::Plotter plotterRic(&logRic, 0.0f, 100.0f, -0.02f, 0.02f, 10.0f, 0.001f);
 	plotterRic.SetBounds(float(240.0 / 768.0), float(440.0 / 768.0), float(10.0 / 1024.0), float(290.0 / 1024.0));                                                                             
 	plotterRic.Track("$i");
@@ -210,9 +222,14 @@ void visualization()
 	pangolin::Plotter plotterTic(&logTic, 0.0f, 100.0f, -0.02f, 0.02f, 10.0f, 0.001f);
 	plotterTic.SetBounds(float(20.0 / 768.0), float(220.0 / 768.0), float(10.0 / 1024.0), float(290.0 / 1024.0));
 	plotterTic.Track("$i");
+
+	pangolin::Plotter plotterFREQ(&logFREQ, 0.0f, 100.0f, 0.0f, 20.0f, 10.0f, 0.5f);
+	plotterFREQ.SetBounds(float(460.0 / 768.0), float(660.0 / 768.0), float(10.0 / 1024.0), float(290.0 / 1024.0));
+	plotterFREQ.Track("$i");
 	
 	pangolin::DisplayBase().AddDisplay(plotterRic);
 	pangolin::DisplayBase().AddDisplay(plotterTic);
+	pangolin::DisplayBase().AddDisplay(plotterFREQ);
 
    	// Define Camera Render Object (for view / scene browsing)
 	pangolin::OpenGlRenderState s_cam(
@@ -246,11 +263,17 @@ void visualization()
 		ViewCameraPose(relocalize_t, relocalize_r, Twc);
 		glClearColor(0.0f, 0.0f, 0.0f, 0.5f);
 		
-		if (keyframe_database.viewNewestKeyFrameEx(ypr, tic))
-		{
+		if (keyframe_database.viewNewestKeyFrameEx(ypr, tic)) {
 			logRic.Log(ypr(0), ypr(1), ypr(2));
 			logTic.Log(tic(0), tic(1), tic(2));
 		}
+
+		std::unique_lock<std::mutex> lock_freq(m_real_freq);
+		if (realFREQ != -1) {
+			logFREQ.Log(realFREQ);
+			realFREQ = -1;
+		}
+		lock_freq.unlock();
 
 		if (menuFollowCamera)
 			s_cam.Follow(Twc);
@@ -263,13 +286,13 @@ void visualization()
 
 		d_image.Activate();
 		glColor3f(1.0f, 1.0f, 1.0f);
-		std::unique_lock<std::mutex> lock(m_img_vis);
+		std::unique_lock<std::mutex> lock_img(m_img_vis);
 		if (!img_visualization.empty()) {
 			memcpy(imageArray, img_visualization.data, sizeof(uchar) * 3 * img_rows*img_cols);
 			imageTexture.Upload(imageArray, GL_RGB, GL_UNSIGNED_BYTE);
 			imageTexture.RenderToViewport();
 		}
-		lock.unlock();
+		lock_img.unlock();
 
 		pangolin::FinishFrame();
 	}
@@ -286,12 +309,12 @@ void predict(const sensor_msgs::ImuConstPtr &imu_msg)
     double dx = imu_msg->linear_acceleration.x;
     double dy = imu_msg->linear_acceleration.y;
     double dz = imu_msg->linear_acceleration.z;
-    Eigen::Vector3d linear_acceleration{dx, dy, dz};
+	Eigen::Vector3d linear_acceleration{ dx, dy, dz };
 
-    double rx = imu_msg->angular_velocity.x;
-    double ry = imu_msg->angular_velocity.y;
-    double rz = imu_msg->angular_velocity.z;
-    Eigen::Vector3d angular_velocity{rx, ry, rz};
+	double rx = imu_msg->angular_velocity.x;
+	double ry = imu_msg->angular_velocity.y;
+	double rz = imu_msg->angular_velocity.z;
+	Eigen::Vector3d angular_velocity{ rx, ry, rz };
 
     Eigen::Vector3d un_acc_0 = tmp_Q * (acc_0 - tmp_Ba - tmp_Q.inverse() * estimator.g);
 
@@ -311,15 +334,14 @@ void predict(const sensor_msgs::ImuConstPtr &imu_msg)
 
 void update()
 {
-    TicToc t_predict;
     latest_time = current_time;
     tmp_P = relocalize_r * estimator.Ps[WINDOW_SIZE] + relocalize_t;
     tmp_Q = relocalize_r * estimator.Rs[WINDOW_SIZE];
     tmp_V = estimator.Vs[WINDOW_SIZE];
     tmp_Ba = estimator.Bas[WINDOW_SIZE];
     tmp_Bg = estimator.Bgs[WINDOW_SIZE];
-    acc_0 = estimator.acc_0;
-    gyr_0 = estimator.gyr_0;
+	acc_0 = estimator.acc_0;
+	gyr_0 = estimator.gyr_0;
 
 	std::queue<sensor_msgs::ImuConstPtr> tmp_imu_buf = imu_buf;
 	for (sensor_msgs::ImuConstPtr tmp_imu_msg; !tmp_imu_buf.empty(); tmp_imu_buf.pop())
@@ -331,34 +353,31 @@ getMeasurements()
 {
     std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>, sensor_msgs::PointCloudConstPtr>> measurements;
 
-    while (true)
-    {
-        if (imu_buf.empty() || feature_buf.empty())	   
-            return measurements;
-		if (!(imu_buf.back()->header.stamp > feature_buf.front()->header.stamp))
-		{
+	while (true)
+	{
+		if (imu_buf.empty() || feature_buf.empty())
+			return measurements;
+		if (!(imu_buf.back()->header.stamp > feature_buf.front()->header.stamp)) {
 			console::print_warn("WARN:wait for imu,only should happen at the beginning.\n");
 			sum_of_wait++;
 			return measurements;
 		}
 
-		if (!(imu_buf.front()->header.stamp < feature_buf.front()->header.stamp))
-		{
+		if (!(imu_buf.front()->header.stamp < feature_buf.front()->header.stamp)) {
 			console::print_warn("WARN:throw img,only should happen at the beginning.\n");
 			feature_buf.pop();
 			continue;
 		}
-        sensor_msgs::PointCloudConstPtr img_msg = feature_buf.front();
-        feature_buf.pop();
+		sensor_msgs::PointCloudConstPtr img_msg = feature_buf.front();
+		feature_buf.pop();
 
-        std::vector<sensor_msgs::ImuConstPtr> IMUs;
-        while (imu_buf.front()->header.stamp <= img_msg->header.stamp)
-        {
-            IMUs.emplace_back(imu_buf.front());
-            imu_buf.pop();
-        }
-        measurements.emplace_back(IMUs, img_msg);
-    }
+		std::vector<sensor_msgs::ImuConstPtr> IMUs;
+		while (imu_buf.front()->header.stamp <= img_msg->header.stamp) {
+			IMUs.emplace_back(imu_buf.front());
+			imu_buf.pop();
+		}
+		measurements.emplace_back(IMUs, img_msg);
+	}
     return measurements;
 }
 
@@ -367,15 +386,14 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
 	m_buf.lock();
 	imu_buf.push(imu_msg);
 	m_buf.unlock();
-   
-    {
-		std::lock_guard<std::mutex> lg(m_state);
-		predict(imu_msg);
-		/*std_msgs::Header header = imu_msg->header;
-        header.frame_id = "world";
-        if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
-            pubLatestOdometry(tmp_P, tmp_Q, tmp_V, header);*/
-    }
+  
+	std::unique_lock<std::mutex> lock_imu(m_state);
+	predict(imu_msg);
+	/*std_msgs::Header header = imu_msg->header;
+	header.frame_id = "world";
+	if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
+		pubLatestOdometry(tmp_P, tmp_Q, tmp_V, header);*/
+	lock_imu.unlock();
 }
 
 void feature_callback(const sensor_msgs::PointCloudConstPtr &feature_msg)
@@ -620,7 +638,7 @@ void process_pose_graph()
 }
 
 // 视觉惯导里程计主线程
-void process()
+void process(bool& emptyMeasure)
 {
     //while (true) 
     //{
@@ -632,9 +650,9 @@ void process()
         });
         lk.unlock();*/
 		measurements = getMeasurements();
+		emptyMeasure = measurements.empty() ? true : false;
 
-		for (auto &measurement : measurements)
-		{
+		for (auto &measurement : measurements) {
 			// 预积分
 			for (auto &imu_msg : measurement.first)
 				send_imu(imu_msg);
@@ -644,8 +662,7 @@ void process()
 
 			TicToc t_s;
 			std::map<int, std::vector<std::pair<int, Eigen::Vector3d>>> image;
-			for (unsigned int i = 0; i < img_msg->points.size(); i++)
-			{
+			for (unsigned int i = 0; i < img_msg->points.size(); ++i) {
 				int v = img_msg->channels[0].values[i] + 0.5;
 				int feature_id = v / NUM_OF_CAM;
 				int camera_id = v % NUM_OF_CAM;
@@ -658,14 +675,11 @@ void process()
 			estimator.processImage(image, img_msg->header);
 			console::print_info("INFO: estimator.processImage time: %d ms\n", int(t_s.toc()));
 
-			if (LOOP_CLOSURE)
-			{
+			if (LOOP_CLOSURE) {
 				// 移除之前的闭环信息
 				std::vector<RetriveData>::iterator it = estimator.retrive_data_vector.begin();
-				for (; it != estimator.retrive_data_vector.end(); )
-				{
-					if ((*it).header < estimator.Headers[0].stamp.toSec())
-					{
+				for (; it != estimator.retrive_data_vector.end(); ) {
+					if ((*it).header < estimator.Headers[0].stamp.toSec()) {
 						it = estimator.retrive_data_vector.erase(it);
 					}
 					else
@@ -673,16 +687,15 @@ void process()
 				}
 
 				m_retrive_data_buf.lock();
-				while (!retrive_data_buf.empty())
-				{
+				while (!retrive_data_buf.empty()) {
 					estimator.retrive_data_vector.emplace_back(retrive_data_buf.front());
 					retrive_data_buf.pop();
 				}
 				m_retrive_data_buf.unlock();
 
 				// 次新帧为关键帧时
-				if (estimator.marginalization_flag == estimator.MARGIN_OLD && estimator.solver_flag == estimator.NON_LINEAR)
-				{
+				if (estimator.marginalization_flag == estimator.MARGIN_OLD && 
+					estimator.solver_flag == estimator.NON_LINEAR) {
 					Eigen::Vector3d vio_T_w_i = estimator.Ps[WINDOW_SIZE - 2];
 					Eigen::Matrix3d vio_R_w_i = estimator.Rs[WINDOW_SIZE - 2];
 					i_buf.lock();
@@ -755,7 +768,7 @@ void process()
 		    //pubTF(estimator, header, relocalize_t, relocalize_r);
 			m_loop_drift.unlock();
 		}
-
+	
         m_buf.lock();
         m_state.lock();
         if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
@@ -1013,25 +1026,16 @@ int main(int argc, char **argv)
 	cv::Mat image;
 	int ni = 0;
 
-    std::cout << "a" << std::endl;
-
 	readParameters(argv[1]);
-
-    std::cout << "b" << std::endl;
 
 	estimator.setParameter();
 	for (int i = 0; i < NUM_OF_CAM; i++)
 		trackerData[i].readIntrinsicParameter(CAM_NAMES[i]);
 
-    std::cout << "c" << std::endl;
-
 	std::vector<std::string> vStrImagesFileNames;
 	std::vector<double> vTimeStamps;
 	LoadImages(std::string(argv[2]), std::string(argv[3]), vStrImagesFileNames, vTimeStamps);
-    std::cout << "d" << std::endl;
 	m_camera = CameraFactory::instance()->generateCameraFromYamlFile(CAM_NAMES_ESTIMATOR);
-
-    std::cout << "d" << std::endl;
 
 	int imageNum = vStrImagesFileNames.size();
 	if (imageNum <= 0){
@@ -1058,24 +1062,37 @@ int main(int argc, char **argv)
 
             if (image.empty()) {
                 console::print_error("ERROR: failed to load image: %s\n", vStrImagesFileNames[ni].c_str());
-                return -1;
+				return -1;
             }
 
             TicToc img_callback_time;
             img_callback(image, image_timestamp);
-			console::print_info("INFO: img callback time: %d ms\n", int(img_callback_time.toc()));
+			t_img_feature = img_callback_time.toc();
+			console::print_info("INFO: img callback time: %.1f ms\n", t_img_feature);
 			
+			bool emptyMeasure;
 			TicToc t_vio;
-			process();
-			console::print_info("INFO: front end vio time: %d ms\n", int(t_vio.toc()));
+			process(emptyMeasure);
+			t_process = t_vio.toc();
+			console::print_info("INFO: front end vio time: %.1f ms\n", t_process);
 
 			TicToc t_loop_detection;
 			process_loop_detection();
-			console::print_info("INFO: loop detection time: %d ms\n", int(t_loop_detection.toc()));
+			t_detect_loop = t_loop_detection.toc();
+			console::print_info("INFO: loop detection time: %.1f ms\n", t_detect_loop);
 
-			TicToc t_pose_graph;
+			TicToc t_process_loop;
 			process_pose_graph();
-			console::print_info("INFO: loop pose graph time: %d ms\n", int(t_pose_graph.toc()));
+			t_pose_graph = t_process_loop.toc();
+			console::print_info("INFO: loop pose graph time: %.1f ms\n", t_pose_graph);
+
+			// 计算系统帧率
+			if (!emptyMeasure) {
+				std::unique_lock<std::mutex> lock(m_real_freq);
+				float frameVelocity = t_process + t_img_feature + t_detect_loop + t_pose_graph;
+				realFREQ = 1000.0 / frameVelocity;
+				lock.unlock();
+			}
         }
 	});
     callback_thread.detach();
