@@ -69,7 +69,7 @@ public:
 	void vector2double();
 	void double2vector();
 	bool failureDetection();
-	void localPointCloud();
+	void updatePointCloud();		// 新增项
 
 	enum SolverFlag {
 		INITIAL,
@@ -119,7 +119,9 @@ public:
 	bool is_key;
 	bool failure_occur;
 
-	std::vector<Eigen::Vector3d> point_cloud;
+	std::unordered_map<int, Eigen::Vector3d> global_cloud;	// 新增项
+	std::unordered_map<int, Eigen::Vector3d> local_cloud;	// 新增项
+	//std::vector<Eigen::Vector3d> point_cloud;
 	std::vector<Eigen::Vector3d> margin_cloud;
 	std::vector<Eigen::Vector3d> key_poses;
 	double initial_timestamp;

@@ -87,16 +87,14 @@ nav_msgs::Path  loop_path;
 std::mutex m_img_vis;
 cv::Mat img_visualization;
 std::mutex m_real_freq;
-float realFREQ = -1;
-float t_process = -1;
-float t_detect_loop = -1;
-float t_pose_graph = -1;
-float t_img_feature = -1;
+float process_freq = -1;
+float show_freq = -1;
+float feature_freq = -1;
 
 std::mutex mutex_key_pose;
 std::vector<Eigen::Vector3d> global_keypose;
-std::vector<Eigen::Vector3d> local_landmarks;
-std::vector<Eigen::Vector3d> global_landmarks;
+std::unordered_map<int, Eigen::Vector3d> local_landmarks;
+std::unordered_map<int, Eigen::Vector3d> global_landmarks;
 
 void updateLoopPath(nav_msgs::Path _loop_path)
 {
@@ -106,19 +104,21 @@ void updateLoopPath(nav_msgs::Path _loop_path)
 void ViewCameraLandmark()
 {
 	std::unique_lock<std::mutex> lock_key_pose(mutex_key_pose);
-    glPointSize(2.5f);
+    glPointSize(1.5f);
 	glBegin(GL_POINTS);
 	glColor3f(0.0, 0.0, 1.0);
-	for (const auto& landmark : local_landmarks) {
-        glVertex3f(landmark.x(), landmark.y(), landmark.z());
+	for (const auto& pairs : local_landmarks) {
+		const auto& landmark = pairs.second;
+		glVertex3f(landmark.x(), landmark.y(), landmark.z());
     }
 	glEnd();
 
     glPointSize(1.5f);
     glBegin(GL_POINTS);
-    glColor3f(0.0, 0.0, 0.0);
-    for (const auto& landmark: global_landmarks) {
-        glVertex3f(landmark.x(), landmark.y(), landmark.z());
+	glColor3f(0.0, 0.0, 0.0);
+    for (const auto& pairs: global_landmarks) {
+		const auto& landmark = pairs.second;
+		glVertex3f(landmark.x(), landmark.y(), landmark.z());
     }
     glEnd();
 
@@ -252,7 +252,9 @@ void visualization()
 	// 添加系统帧率统计曲线图
 	pangolin::DataLog logFREQ;
 	std::vector<std::string> labelFREQ;
-	labelFREQ.emplace_back(std::string("FREQ"));
+	labelFREQ.emplace_back(std::string("feature_freq"));
+	labelFREQ.emplace_back(std::string("process_freq"));
+	labelFREQ.emplace_back(std::string("show_freq"));
 	logFREQ.SetLabels(labelFREQ);
 
 	pangolin::Plotter plotterRic(&logRic, 0.0f, 100.0f, -0.02f, 0.02f, 10.0f, 0.001f);
@@ -297,8 +299,9 @@ void visualization()
 	Eigen::Vector3d ypr;
 	Twc.SetIdentity();
 
-	while (!pangolin::ShouldQuit() & running_flag)
-	{
+	while (!pangolin::ShouldQuit() & running_flag) {
+		TicToc t_show_static;
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		ViewCameraPose(relocalize_t, relocalize_r, Twc);
 		glClearColor(1.0f, 1.0f, 1.0f, 0.5f);
@@ -309,10 +312,12 @@ void visualization()
 		}
 
 		std::unique_lock<std::mutex> lock_freq(m_real_freq);
-		if (realFREQ != -1) {
-			logFREQ.Log(realFREQ);
-			realFREQ = -1;
-		}
+		logFREQ.Log(feature_freq, process_freq, show_freq);
+		/*if (process_freq != -1 && feature_freq != -1 && show_freq != -1) {
+			feature_freq = -1;
+			process_freq = -1;
+			show_freq = -1;
+		}*/
 		lock_freq.unlock();
 
 		if (menuFollowCamera) {
@@ -342,6 +347,14 @@ void visualization()
 		lock_img.unlock();
 
 		pangolin::FinishFrame();
+
+		float t_show = t_show_static.toc();
+		if (lock_freq.try_lock()) {
+			show_freq = 1000.0 / t_show;
+			lock_freq.unlock();
+		}
+
+		console::print_highlight("INFO: visualization thread time: %.1f ms\n", t_show);
 	}
 	console::print_highlight("Visualization thread end.\n");
 	view_done = true;
@@ -700,13 +713,14 @@ void process(bool& emptyMeasure)
 		emptyMeasure = measurements.empty() ? true : false;
 
 		for (const auto &measurement : measurements) {
-			// 预积分
+			TicToc t_process_static;
+
+			// 加入惯导信息到系统中进行预积分
 			for (const auto &imu_msg : measurement.first)
 				send_imu(imu_msg);
 
+			// 从配对的惯导-图像信息中取出图像特征信息
 			const auto& img_msg = measurement.second;
-            console::print_highlight("Process vision data with stamp %f.\n",img_msg->header.stamp.toSec());
-
 			std::map<int, std::vector<std::pair<int, Eigen::Vector3d>>> image;
 			for (unsigned int i = 0; i < img_msg->points.size(); ++i) {
 				int v = img_msg->channels[0].values[i] + 0.5;
@@ -719,17 +733,15 @@ void process(bool& emptyMeasure)
 				image[feature_id].emplace_back(camera_id, Eigen::Vector3d(x, y, z));
 			}
 
-			TicToc t_processImage;
+			// 加入图像特征信息到系统中进行优化
 			estimator.processImage(image, img_msg->header);
-			console::print_info("INFO: estimator.processImage time: %d ms\n", int(t_processImage.toc()));
 
             if (estimator.solver_flag == estimator.NON_LINEAR) {
                 std::unique_lock<std::mutex> key_pose_lock(mutex_key_pose);
                 global_keypose.emplace_back(estimator.Ps[WINDOW_SIZE]);
-                //key_pose = std::move(estimator.key_poses);
-                local_landmarks = std::move(estimator.point_cloud);
-                global_landmarks.insert(global_landmarks.end(),local_landmarks.begin(), local_landmarks.end());
-                key_pose_lock.unlock();
+				local_landmarks = std::move(estimator.local_cloud);
+				global_landmarks = estimator.global_cloud;
+				key_pose_lock.unlock();
             }
 
 			if (LOOP_CLOSURE) {
@@ -823,6 +835,13 @@ void process(bool& emptyMeasure)
 			//pubPointCloud(estimator, header, relocalize_t, relocalize_r);
 		    //pubTF(estimator, header, relocalize_t, relocalize_r);
 			m_loop_drift.unlock();
+
+			float t_process = t_process_static.toc();
+			console::print_highlight("INFO: process thread time: %.1f ms\n", t_process);
+
+			std::unique_lock<std::mutex> lock_freq(m_real_freq);
+			process_freq = 1000.0 / t_process;
+			lock_freq.unlock();
 		}
 	
         m_buf.lock();
@@ -836,6 +855,8 @@ void process(bool& emptyMeasure)
 
 void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 {
+	TicToc t_feature_static;
+
 	if (LOOP_CLOSURE) {
 		i_buf.lock();
 		image_buf.push(std::make_pair(show_img, timestamp.toSec()));
@@ -995,6 +1016,13 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 		cv::flip(img_visualization, img_visualization, 0);
 		lock.unlock();
 	}
+	
+	float t_feature = t_feature_static.toc();
+	console::print_highlight("INFO: feature track thread time: %.1f ms\n", t_feature);
+
+	std::unique_lock<std::mutex> lock_freq(m_real_freq);
+	feature_freq = 1000.0 / t_feature;
+	lock_freq.unlock();
 }
 
 void LoadImages(const std::string &strImagePath, const std::string &strTimesStampsPath,
@@ -1119,41 +1147,14 @@ int main(int argc, char **argv)
 				return -1;
             }
 
-            TicToc img_callback_time;
             img_callback(image, image_timestamp);
-			t_img_feature = img_callback_time.toc();
-			console::print_info("INFO: img callback time: %.1f ms\n", t_img_feature);
-
-			TicToc t_loop_detection;
-			//process_loop_detection();
-			t_detect_loop = t_loop_detection.toc();
-			console::print_info("INFO: loop detection time: %.1f ms\n", t_detect_loop);
-
-			TicToc t_process_loop;
-			//process_pose_graph();
-			t_pose_graph = t_process_loop.toc();
-			console::print_info("INFO: loop pose graph time: %.1f ms\n", t_pose_graph);
         }
 	});
     callback_thread.detach();
 
     bool emptyMeasure;
     std::thread process_thread(process, std::ref(emptyMeasure));
-    process_thread.detach();
-
-    //bool emptyMeasure;
-    //TicToc t_vio;
-    //process(emptyMeasure);
-    //t_process = t_vio.toc();
-    //console::print_info("INFO: front end vio time: %.1f ms\n", t_process);
-
-    // 计算系统帧率
-    if (!emptyMeasure) {
-        std::unique_lock<std::mutex> lock(m_real_freq);
-        float frameVelocity = t_process + t_img_feature + t_detect_loop + t_pose_graph;
-        realFREQ = 1000.0 / frameVelocity;
-        lock.unlock();
-    }
+	process_thread.detach();
 
 	visualization();
 

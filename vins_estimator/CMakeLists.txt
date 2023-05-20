@@ -120,6 +120,7 @@ file(GLOB VioHdrs				"./src/*.h")
 file(GLOB VioFactorHdrs			"./src/factor/*.h")
 file(GLOB VioUtilityHdrs		"./src/utility/*.h")
 file(GLOB VioInitialHdrs		"./src/initial/*.h")
+file(GLOB VioMyBackEndHdrs		"./src/back_end/*.h")
 file(GLOB VioLoopClosureHdrs	"./src/loop_closure/*.h")
 file(GLOB VioFeatureTrackHdrs	"./src/feature_tracker/*.h")
 
@@ -127,6 +128,7 @@ file(GLOB VioSrcs				"./src/*.cpp")
 file(GLOB VioFactorSrcs			"./src/factor/*.cpp")
 file(GLOB VioUtilitySrcs		"./src/utility/*.cpp")
 file(GLOB VioInitialSrcs		"./src/initial/*.cpp")
+file(GLOB VioMyBackEndSrcs		"./src/back_end/*.cpp")
 file(GLOB VioLoopClosureSrcs	"./src/loop_closure/*.cpp")
 file(GLOB VioFeatureTrackSrcs	"./src/feature_tracker/*.cpp")
 
@@ -138,6 +140,8 @@ source_group("utility src" 			FILES ${VioUtilitySrcs})
 source_group("utility hdr" 			FILES ${VioUtilityHdrs})
 source_group("initial src" 			FILES ${VioInitialSrcs})
 source_group("initial hdr" 			FILES ${VioInitialHdrs})
+source_group("back_end src"			FILES ${VioMyBackEndSrcs})
+source_group("back_end hdr"			FILES ${VioMyBackEndHdrs})
 source_group("loop_closure src" 	FILES ${VioLoopClosureSrcs})
 source_group("loop_closure hdr" 	FILES ${VioLoopClosureHdrs})
 source_group("feature_tracker src" 	FILES ${VioFeatureTrackSrcs})
@@ -152,6 +156,8 @@ add_library(vins_estimator
 	${VioUtilityHdrs}
 	${VioInitialSrcs}
 	${VioInitialHdrs}
+	${VioMyBackEndSrcs}
+	${VioMyBackEndHdrs}
 	${VioLoopClosureSrcs}
 	${VioLoopClosureHdrs}
 	${VioFeatureTrackSrcs}

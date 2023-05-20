@@ -45,6 +45,7 @@ void Estimator::clearState()
     sum_of_front = 0;
     frame_count = 0;
     solver_flag = INITIAL;
+	global_cloud.clear();			// 新增项
     initial_timestamp = 0;
     all_image_frame.clear();
     relocalize = false;
@@ -183,8 +184,8 @@ void Estimator::processImage(const std::map<int, std::vector<std::pair<int, Eige
 		for (int i = 0; i <= WINDOW_SIZE; i++)
 			key_poses.emplace_back(Ps[i]);
 		
-		point_cloud.clear();
-		localPointCloud();
+		local_cloud.clear();		// 新增项
+		updatePointCloud();			// 新增项
 
 		// 优化完成后获取滑窗中第一帧与最后一帧的位姿
 		last_R = Rs[WINDOW_SIZE];
@@ -581,20 +582,23 @@ void Estimator::double2vector()
     }
 }
 
-void Estimator::localPointCloud()
+void Estimator::updatePointCloud()
 {
 	for (auto &it_per_id : f_manager.feature) {
 		it_per_id.used_num = it_per_id.feature_per_frame.size();
-		if (!(it_per_id.used_num >= 5 && it_per_id.start_frame < WINDOW_SIZE - 2))
+		if (!(it_per_id.used_num >= 2 && it_per_id.start_frame < WINDOW_SIZE - 2))
 			continue;
 
 		if (it_per_id.solve_flag != 1)
 			continue;
 
 		int imu_i = it_per_id.start_frame;
-		Eigen::Vector3d point = it_per_id.feature_per_frame[0].point*it_per_id.estimated_depth;
-		point_cloud.emplace_back(relocalize_r*Rs[imu_i] * (ric[0] * point + tic[0]) + 
-			relocalize_r * Ps[imu_i] + relocalize_t);
+		Eigen::Vector3d pt_c = it_per_id.feature_per_frame[0].point*it_per_id.estimated_depth;
+		Eigen::Vector3d pt_w = relocalize_r * Rs[imu_i] * (ric[0] * pt_c + tic[0]) +
+			relocalize_r * Ps[imu_i] + relocalize_t;
+
+		global_cloud[it_per_id.feature_id] = pt_w;
+		local_cloud[it_per_id.feature_id] = pt_w;
 	}
 }
 
@@ -614,7 +618,7 @@ bool Estimator::failureDetection()
     }
 	Eigen::Vector3d tmp_P = Ps[WINDOW_SIZE];
     if ((tmp_P - last_P).norm() > 5) {
-        console::print_error("big translation detect.\n");
+		console::print_error("big translation detect.\n");
         return true;
     }
     if (std::abs(tmp_P.z() - last_P.z()) > 1) {
