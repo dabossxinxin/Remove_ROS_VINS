@@ -585,14 +585,14 @@ void Estimator::localPointCloud()
 {
 	for (auto &it_per_id : f_manager.feature) {
 		it_per_id.used_num = it_per_id.feature_per_frame.size();
-		if (!(it_per_id.used_num >= 2 && it_per_id.start_frame < WINDOW_SIZE - 2))
+		if (!(it_per_id.used_num >= 5 && it_per_id.start_frame < WINDOW_SIZE - 2))
 			continue;
 
 		if (it_per_id.solve_flag != 1)
 			continue;
 
 		int imu_i = it_per_id.start_frame;
-		Eigen::Vector3d point = it_per_id.feature_per_frame[imu_i].point*it_per_id.estimated_depth;
+		Eigen::Vector3d point = it_per_id.feature_per_frame[0].point*it_per_id.estimated_depth;
 		point_cloud.emplace_back(relocalize_r*Rs[imu_i] * (ric[0] * point + tic[0]) + 
 			relocalize_r * Ps[imu_i] + relocalize_t);
 	}

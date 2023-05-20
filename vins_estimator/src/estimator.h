@@ -28,19 +28,19 @@ struct RetriveData
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-	int		old_index;		// »Ø»·Ö¡ID
-	int		cur_index;		// µ±Ç°Ö¡ID
-    double	header;			// µ±Ç°Ö¡Ê±¼ä´Á
-	bool	relocalized;	// µ±Ç°ÐÅÏ¢ÊÇ·ñÒÑ¾­ÓÃÓÚÖØ¶¨Î»
-	bool	relative_pose;	// µ±Ç°ÐÅÏ¢ÖÐÊÇ·ñÓÐ»Ø»·Ç°ºóÏàÍ¬Ö¡µÄÎ»×Ë±ä»»
-	double	relative_yaw;	// »Ø»·Ç°ºó»Ø»·Ö¡µÄYAW±ä»»Á¿
-	double	loop_pose[7];	// »Ø»·Ö¡Í¨¹ýPnP¼ÆËãµÃµ½µÄÎ»×Ë
-	Eigen::Vector3d				P_old;			// »Ø»·Ö¡Î»ÖÃ
-	Eigen::Matrix3d				R_old;			// »Ø»·Ö¡×ËÌ¬
-	Eigen::Vector3d				relative_t;		// »Ø»·Ç°ºó»Ø»·Ö¡µÄÎ»ÖÃ±ä»¯Á¿
-	Eigen::Quaterniond			relative_q;		// »Ø»·Ç°ºó»Ø»·Ö¡µÄ×ËÌ¬±ä»¯Á¿
-	std::vector<cv::Point2f>	measurements;	// µ±Ç°Ö¡ÔÚ»Ø»·ÖÐÆ¥Åäµ½µÄÌØÕ÷µã
-	std::vector<int>			features_ids;	// µ±Ç°Ö¡ÖÐÆ¥Åäµ½µÄÌØÕ÷µãID
+	int		old_index;		// ï¿½Ø»ï¿½Ö¡ID
+	int		cur_index;		// ï¿½ï¿½Ç°Ö¡ID
+    double	header;			// ï¿½ï¿½Ç°Ö¡Ê±ï¿½ï¿½ï¿½
+	bool	relocalized;	// ï¿½ï¿½Ç°ï¿½ï¿½Ï¢ï¿½Ç·ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø¶ï¿½Î»
+	bool	relative_pose;	// ï¿½ï¿½Ç°ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ð»Ø»ï¿½Ç°ï¿½ï¿½ï¿½ï¿½Í¬Ö¡ï¿½ï¿½Î»ï¿½Ë±ä»»
+	double	relative_yaw;	// ï¿½Ø»ï¿½Ç°ï¿½ï¿½Ø»ï¿½Ö¡ï¿½ï¿½YAWï¿½ä»»ï¿½ï¿½
+	double	loop_pose[7];	// ï¿½Ø»ï¿½Ö¡Í¨ï¿½ï¿½PnPï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½Î»ï¿½ï¿½
+	Eigen::Vector3d				P_old;			// ï¿½Ø»ï¿½Ö¡Î»ï¿½ï¿½
+	Eigen::Matrix3d				R_old;			// ï¿½Ø»ï¿½Ö¡ï¿½ï¿½Ì¬
+	Eigen::Vector3d				relative_t;		// ï¿½Ø»ï¿½Ç°ï¿½ï¿½Ø»ï¿½Ö¡ï¿½ï¿½Î»ï¿½Ã±ä»¯ï¿½ï¿½
+	Eigen::Quaterniond			relative_q;		// ï¿½Ø»ï¿½Ç°ï¿½ï¿½Ø»ï¿½Ö¡ï¿½ï¿½ï¿½ï¿½Ì¬ï¿½ä»¯ï¿½ï¿½
+	std::vector<cv::Point2f>	measurements;	// ï¿½ï¿½Ç°Ö¡ï¿½Ú»Ø»ï¿½ï¿½ï¿½Æ¥ï¿½äµ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	std::vector<int>			features_ids;	// ï¿½ï¿½Ç°Ö¡ï¿½ï¿½Æ¥ï¿½äµ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ID
 };
 
 class Estimator
@@ -71,14 +71,12 @@ public:
 	bool failureDetection();
 	void localPointCloud();
 
-	enum SolverFlag
-	{
+	enum SolverFlag {
 		INITIAL,
 		NON_LINEAR
 	};
 
-	enum MarginalizationFlag
-	{
+	enum MarginalizationFlag {
 		MARGIN_OLD = 0,
 		MARGIN_SECOND_NEW = 1
 	};

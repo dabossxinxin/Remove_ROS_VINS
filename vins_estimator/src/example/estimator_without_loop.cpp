@@ -94,8 +94,9 @@ float t_pose_graph = -1;
 float t_img_feature = -1;
 
 std::mutex mutex_key_pose;
-std::vector<Eigen::Vector3d> key_pose;
-std::vector<Eigen::Vector3d> landmarks;
+std::vector<Eigen::Vector3d> global_keypose;
+std::vector<Eigen::Vector3d> local_landmarks;
+std::vector<Eigen::Vector3d> global_landmarks;
 
 void updateLoopPath(nav_msgs::Path _loop_path)
 {
@@ -105,15 +106,22 @@ void updateLoopPath(nav_msgs::Path _loop_path)
 void ViewCameraLandmark()
 {
 	std::unique_lock<std::mutex> lock_key_pose(mutex_key_pose);
-	GLfloat size = 2.5;
-	glPointSize(size);
+    glPointSize(2.5f);
 	glBegin(GL_POINTS);
 	glColor3f(0.0, 0.0, 1.0);
-
-	for (const auto& landmark : landmarks) {
-		glVertex3f(landmark.x(), landmark.y(), landmark.z());
-	}
+	for (const auto& landmark : local_landmarks) {
+        glVertex3f(landmark.x(), landmark.y(), landmark.z());
+    }
 	glEnd();
+
+    glPointSize(1.5f);
+    glBegin(GL_POINTS);
+    glColor3f(0.0, 0.0, 0.0);
+    for (const auto& landmark: global_landmarks) {
+        glVertex3f(landmark.x(), landmark.y(), landmark.z());
+    }
+    glEnd();
+
 	lock_key_pose.unlock();
 }
 
@@ -126,7 +134,7 @@ void ViewCameraPath()
 	glLineWidth(line_width);
 	glBegin(GL_LINE_STRIP);
 
-	for (const auto& it : key_pose) {
+	for (const auto& it : global_keypose) {
 		glVertex3f(it.x(), it.y(), it.z());
 	}
 	glEnd();
@@ -679,24 +687,24 @@ void process_pose_graph()
 // 视觉惯导里程计主线程
 void process(bool& emptyMeasure)
 {
-    //while (true) 
-    //{
+    while (true)
+    {
 		// 获取IMU与相机同一时间戳的数据对
         std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>, sensor_msgs::PointCloudConstPtr>> measurements;
-        /*std::unique_lock<std::mutex> lk(m_buf);
+        std::unique_lock<std::mutex> lk(m_buf);
         con.wait(lk, [&]{
             return (measurements = getMeasurements()).size() != 0;
         });
-        lk.unlock();*/
-		measurements = getMeasurements();
+        lk.unlock();
+		//measurements = getMeasurements();
 		emptyMeasure = measurements.empty() ? true : false;
 
-		for (auto &measurement : measurements) {
+		for (const auto &measurement : measurements) {
 			// 预积分
-			for (auto &imu_msg : measurement.first)
+			for (const auto &imu_msg : measurement.first)
 				send_imu(imu_msg);
 
-			auto img_msg = measurement.second;
+			const auto& img_msg = measurement.second;
             console::print_highlight("Process vision data with stamp %f.\n",img_msg->header.stamp.toSec());
 
 			std::map<int, std::vector<std::pair<int, Eigen::Vector3d>>> image;
@@ -714,12 +722,15 @@ void process(bool& emptyMeasure)
 			TicToc t_processImage;
 			estimator.processImage(image, img_msg->header);
 			console::print_info("INFO: estimator.processImage time: %d ms\n", int(t_processImage.toc()));
-			
-			std::unique_lock<std::mutex> key_pose_lock(mutex_key_pose);
-			key_pose.emplace_back(estimator.Ps[WINDOW_SIZE]);
-			//key_pose = std::move(estimator.key_poses);
-			landmarks = std::move(estimator.point_cloud);
-			key_pose_lock.unlock();
+
+            if (estimator.solver_flag == estimator.NON_LINEAR) {
+                std::unique_lock<std::mutex> key_pose_lock(mutex_key_pose);
+                global_keypose.emplace_back(estimator.Ps[WINDOW_SIZE]);
+                //key_pose = std::move(estimator.key_poses);
+                local_landmarks = std::move(estimator.point_cloud);
+                global_landmarks.insert(global_landmarks.end(),local_landmarks.begin(), local_landmarks.end());
+                key_pose_lock.unlock();
+            }
 
 			if (LOOP_CLOSURE) {
 				// 移除之前的闭环信息
@@ -820,7 +831,7 @@ void process(bool& emptyMeasure)
             update();
 		m_state.unlock();
 		m_buf.unlock();
-    //}
+    }
 }
 
 void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
@@ -848,7 +859,7 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 	}
 
 	// 光流跟踪特征坐标
-	for (int i = 0; i < NUM_OF_CAM; i++) {
+	for (int i = 0; i < NUM_OF_CAM; ++i) {
 		if (i != 1 || !STEREO_TRACK)
 			trackerData[i].readImage(show_img.rowRange(ROW * i, ROW * (i + 1)));
 		else {
@@ -907,8 +918,7 @@ void img_callback(const cv::Mat &show_img, const ros::Time &timestamp)
 	}
 
     // 更新特征点ID
-	for (unsigned int i = 0;; i++)
-	{
+	for (unsigned int i = 0;; i++) {
 		bool completed = false;
 		for (int j = 0; j < NUM_OF_CAM; j++)
 			if (j != 1 || !STEREO_TRACK)
@@ -1093,8 +1103,7 @@ int main(int argc, char **argv)
 	}
 
     std::thread callback_thread([&](){
-        for (ni = 0; ni < imageNum; ++ni)
-        {
+        for (ni = 0; ni < imageNum; ++ni) {
             double tframe = vTimeStamps[ni];   //timestamp
             uint32_t sec = tframe;
             uint32_t nsec = (tframe - sec)*1e9;
@@ -1114,12 +1123,6 @@ int main(int argc, char **argv)
             img_callback(image, image_timestamp);
 			t_img_feature = img_callback_time.toc();
 			console::print_info("INFO: img callback time: %.1f ms\n", t_img_feature);
-			
-			bool emptyMeasure;
-			TicToc t_vio;
-			process(emptyMeasure);
-			t_process = t_vio.toc();
-			console::print_info("INFO: front end vio time: %.1f ms\n", t_process);
 
 			TicToc t_loop_detection;
 			//process_loop_detection();
@@ -1130,17 +1133,27 @@ int main(int argc, char **argv)
 			//process_pose_graph();
 			t_pose_graph = t_process_loop.toc();
 			console::print_info("INFO: loop pose graph time: %.1f ms\n", t_pose_graph);
-
-			// 计算系统帧率
-			if (!emptyMeasure) {
-				std::unique_lock<std::mutex> lock(m_real_freq);
-				float frameVelocity = t_process + t_img_feature + t_detect_loop + t_pose_graph;
-				realFREQ = 1000.0 / frameVelocity;
-				lock.unlock();
-			}
         }
 	});
     callback_thread.detach();
+
+    bool emptyMeasure;
+    std::thread process_thread(process, std::ref(emptyMeasure));
+    process_thread.detach();
+
+    //bool emptyMeasure;
+    //TicToc t_vio;
+    //process(emptyMeasure);
+    //t_process = t_vio.toc();
+    //console::print_info("INFO: front end vio time: %.1f ms\n", t_process);
+
+    // 计算系统帧率
+    if (!emptyMeasure) {
+        std::unique_lock<std::mutex> lock(m_real_freq);
+        float frameVelocity = t_process + t_img_feature + t_detect_loop + t_pose_graph;
+        realFREQ = 1000.0 / frameVelocity;
+        lock.unlock();
+    }
 
 	visualization();
 
